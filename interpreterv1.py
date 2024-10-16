@@ -77,7 +77,7 @@ class Interpreter(InterpreterBase):
             return self.inputi(node_dict['args'])
         
         if func_name == 'print':
-            return self.printout()
+            return self.printout(func_node.dict['args'])
 
         # IF not PRINT or INPUTI, go through statements (instead of returning value)
         ''' ---- Run statements in order ---- '''
@@ -102,7 +102,7 @@ class Interpreter(InterpreterBase):
             case 'fcall':
                 if (self.trace_output == True):
                     print("\nRUN_STATEMENT: This node is a function call")
-                self.run_fcall(statement_node)
+                self.run_func(statement_node)
             case _:
                 super().error(
                     ErrorType.NAME_ERROR,
@@ -173,40 +173,6 @@ class Interpreter(InterpreterBase):
                     ErrorType.TYPE_ERROR,
                     f"Unrecognized expression \"{node_expression.elem_type}\" in variable assignment for {var_name}"
                 ) 
-
-    ''' ---- Function Calls ---- '''
-    # Should return VALUE returned from the function
-    # TODO: I'm not using this right now because I want to combine fcall and func, but
-        # possible that I do really need 2 different functions
-    def run_fcall(self, node):
-        if (self.trace_output == True):
-            print("\tInside RUN_FCALL\n\t--Node value: ", node)
-        
-        node_dict = node.dict
-        func_name = node_dict['name']
-
-        # Check that function has been defined
-        # TODO: don't hard-code this when there are custom function calls
-        allowable_functions = ['inputi', 'print', 'main']
-        if func_name not in allowable_functions:
-            super().error(
-                ErrorType.NAME_ERROR,
-                f"Function {node_dict['name']} has not been defined"
-            )
-        
-        # If INPUTI function
-        if func_name == 'inputi':
-            if (self.trace_output == True):
-                print("\tCalling inputi function")
-            if (len (node_dict['args']) > 1):
-                super().error(
-                    ErrorType.NAME_ERROR,
-                    f"No inputi() function found that takes more than 1 parameter"
-                )
-            return self.inputi(node_dict['args'])
-        
-        if func_name == 'print':
-            return self.printout(node.dict['args'])
         
 
     ''' ---- Evaluating Expressions / Operations ---- '''
@@ -238,7 +204,8 @@ class Interpreter(InterpreterBase):
             return self.get_value(node)
         
         if node_type == 'fcall':
-            print("EXPRESSION USES A FUNCTION CALL")
+            if (self.trace_output == True):
+                print("EXPRESSION USES A FUNCTION CALL")
             return self.run_func(node)
         
         # If try to operate on a string --> error
