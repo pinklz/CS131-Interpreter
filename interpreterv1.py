@@ -77,7 +77,7 @@ class Interpreter(InterpreterBase):
             return self.inputi(node_dict['args'])
         
         if func_name == 'print':
-            return self.printout(func_node.dict['args'])
+            return self.printout(node_dict['args'])
 
         # IF not PRINT or INPUTI, go through statements (instead of returning value)
         ''' ---- Run statements in order ---- '''
@@ -124,7 +124,6 @@ class Interpreter(InterpreterBase):
                 f"Variable {var_name} defined more than once"
             )
 
-        
         # Add new variable to PROGRAM_VARS           Initial value: None
         self.program_vars[var_name] = None
         if (self.trace_output == True):
@@ -162,9 +161,6 @@ class Interpreter(InterpreterBase):
 
         # Function call
         elif (node_type == 'fcall'):
-            if (self.trace_output == True):
-                print("++ function call, not here yet")
-            # self.program_vars[var_name] = self.run_fcall(node.dict['expression'])
             self.program_vars[var_name] = self.run_func(node.dict['expression'])
             if (self.trace_output == True):
                 print("\t\tUpdated program_vars: ", self.program_vars)
@@ -194,7 +190,7 @@ class Interpreter(InterpreterBase):
             # Check that variable type isn't a string
             if (isinstance( self.program_vars[ node.dict['name'] ], str)):
                 super().error(
-                    ErrorType.NAME_ERROR,
+                    ErrorType.TYPE_ERROR,
                     f"Incompatible types for arithmetic operation, attempted to use string (via existing variable {node.dict['name']} value)"
                 )
             return self.program_vars[ node.dict['name'] ]
