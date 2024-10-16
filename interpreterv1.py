@@ -43,17 +43,43 @@ class Interpreter(InterpreterBase):
 
     ''' ---- RUN FUNCTION ---- '''
     def run_func(self, func_node):
-        if (func_node.elem_type != 'func'):
+        if (func_node.elem_type != 'func' and func_node.elem_type != 'fcall'):
             super().error(
                 ErrorType.TYPE_ERROR,
                 "Non-function node passed into run_func"
             )
-
         
         node_dict = func_node.dict
         if (self.trace_output == True):
             print("\n-- Currently running function: ", node_dict['name'])
 
+        
+        func_name = node_dict['name']
+
+        # Check that function has been defined
+        # TODO: don't hard-code this when there are custom function calls
+        allowable_functions = ['inputi', 'print', 'main']
+        if func_name not in allowable_functions:
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Function {node_dict['name']} has not been defined"
+            )
+        
+        # If INPUTI function
+        if func_name == 'inputi':
+            if (self.trace_output == True):
+                print("\tCalling inputi function")
+            if (len (node_dict['args']) > 1):
+                super().error(
+                    ErrorType.NAME_ERROR,
+                    f"No inputi() function found that takes more than 1 parameter"
+                )
+            return self.inputi(node_dict['args'])
+        
+        if func_name == 'print':
+            return self.printout()
+
+        # IF not PRINT or INPUTI, go through statements (instead of returning value)
         ''' ---- Run statements in order ---- '''
         for statement_node in node_dict['statements']:
             self.run_statement( statement_node )
@@ -138,7 +164,8 @@ class Interpreter(InterpreterBase):
         elif (node_type == 'fcall'):
             if (self.trace_output == True):
                 print("++ function call, not here yet")
-            self.program_vars[var_name] = self.run_fcall(node.dict['expression'])
+            # self.program_vars[var_name] = self.run_fcall(node.dict['expression'])
+            self.program_vars[var_name] = self.run_func(node.dict['expression'])
             if (self.trace_output == True):
                 print("\t\tUpdated program_vars: ", self.program_vars)
         else:
@@ -149,6 +176,8 @@ class Interpreter(InterpreterBase):
 
     ''' ---- Function Calls ---- '''
     # Should return VALUE returned from the function
+    # TODO: I'm not using this right now because I want to combine fcall and func, but
+        # possible that I do really need 2 different functions
     def run_fcall(self, node):
         if (self.trace_output == True):
             print("\tInside RUN_FCALL\n\t--Node value: ", node)
@@ -158,7 +187,7 @@ class Interpreter(InterpreterBase):
 
         # Check that function has been defined
         # TODO: don't hard-code this when there are custom function calls
-        allowable_functions = ['inputi', 'print']
+        allowable_functions = ['inputi', 'print', 'main']
         if func_name not in allowable_functions:
             super().error(
                 ErrorType.NAME_ERROR,
@@ -177,7 +206,7 @@ class Interpreter(InterpreterBase):
             return self.inputi(node_dict['args'])
         
         if func_name == 'print':
-            return self.printout()
+            return self.printout(node.dict['args'])
         
 
     ''' ---- Evaluating Expressions / Operations ---- '''
@@ -210,7 +239,7 @@ class Interpreter(InterpreterBase):
         
         if node_type == 'fcall':
             print("EXPRESSION USES A FUNCTION CALL")
-            return self.run_fcall(node)
+            return self.run_func(node)
         
         # If try to operate on a string --> error
         if node_type == 'string':
@@ -259,5 +288,21 @@ class Interpreter(InterpreterBase):
         # lst = list of strings to concatenate
         # TODO: loop over, concatenate, then print
             # Need to evaluate variables, expressions, + function calls
-        super().output("PRINT not implemented yet")
+        string_to_output = ""       # TODO: check if 0 arguments should still print "" or just return
+        for element in lst:
+            if (self.trace_output == True):
+                print("\t", element)
+            node_type = element.elem_type
+            if node_type == 'string':
+                string_to_output += element.dict['val']
+            elif (node_type in ['int', '+', '-', '*', '/']):
+                string_to_output += str (self.run_operation(element))
+            # elif node_type == 'int':
+            #     string_to_output += str( element.dict['val'] )
+            
+            # # If variable, retrieve variable value
+            elif node_type == 'var':
+                string_to_output += str( self.program_vars[element.dict['name']])
+
+        super().output(string_to_output)
         return None
