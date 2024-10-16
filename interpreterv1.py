@@ -113,21 +113,29 @@ class Interpreter(InterpreterBase):
 
         # Calculate expression
         ''' you must evaluate the expression/variable/value to the right of the equal sign
-        and then assiciate the variable name on the left of the equal sign with that resulting value'''
+        and then assiciate the variable name on the left of the equal sign with that resulting value
+        
+        when set y = x --> y points to the var node x (not the value)
+        '''
         node_expression = node_dict['expression']
         # TODO: Check ALL of: expression, value, or variable
+
         match node_expression.elem_type:
             # If VALUE type
-            case 'int':
-                self.program_vars[var_name] = self.get_value(node_expression)
-                print("\t\tUpdated program_vars: ", self.program_vars)
+            # case 'int':
+            #     self.program_vars[var_name] = self.get_value(node_expression)
+            #     print("\t\tUpdated program_vars: ", self.program_vars)
             case 'string':
                 self.program_vars[var_name] = self.get_value(node_expression)
                 print("\t\tUpdated program_vars: ", self.program_vars)
             
             # If EXPRESSION type
+            case 'int':
+                self.program_vars[var_name] = self.run_operation(node_expression)
+                print("\t\tUpdated program_vars: ", self.program_vars)
             case '+':
-                self.run_operation(node_expression)
+                self.program_vars[var_name] = self.run_operation(node_expression)
+                print("\t\tUpdated program_vars: ", self.program_vars)
 
             # If FUNCTION CALL type
             case 'fcall':
@@ -147,15 +155,42 @@ class Interpreter(InterpreterBase):
 
 
     # OPERATION NODE
+        # Should return value of operation
+        # If nested, call run_op on the nested one --> should return value of nested operation to be used in top level op
     def run_operation(self, node):
         print("OPERATION: ", node.elem_type)
-        print(node.dict)
-        for op in node.dict:
-            print(node.dict[op])
 
-                # Where I left off: Need to calculate expression, recursively if more tahn binary operation
+        node_type = node.elem_type
 
-        # TODO: if op1 or op2 is ANOTHER EXPRESSION - is left associative (so 5+6+7 --> op1 = (5+6), op2 = 7)
+         # BASE: if operand is a VARIABLE --> return that variable's value
+        if node_type == 'var':
+            if node.dict['name'] not in self.program_vars:
+                super().error(
+                    ErrorType.NAME_ERROR,
+                    f"Variable {node.dict['name']} has not been declared"
+                )
+            # TODO: make sure variable value is not a string
+            return self.program_vars[ node.dict['name'] ]
+
+        # BASE: if operand is a VALUE --> return that value
+        if node_type == 'int':
+            return self.get_value(node)
+        
+        if node_type == 'string':
+            super().error(
+                ErrorType.TYPE_ERROR,
+                "Incompatible types for arithmetic operation, attempted to use string"
+            )
+
+        # Try operation types
+        if node_type == '+':
+            op1 = node.dict['op1']
+            op2 = node.dict['op2']
+            return self.run_operation(op1) + self.run_operation(op2)
+        if node_type == '-':
+            op1 = node.dict['op1']
+            op2 = node.dict['op2']
+            return self.run_operation(op1) - self.run_operation(op2)        
 
 
     # Return value of value nodes
