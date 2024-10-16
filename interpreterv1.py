@@ -6,6 +6,7 @@ class Interpreter(InterpreterBase):
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
+        self.trace_output = trace_output
 
     ''' ---- RUN PROGRAM ---- '''
     def run(self, program):
@@ -50,7 +51,8 @@ class Interpreter(InterpreterBase):
 
         
         node_dict = func_node.dict
-        print("\n-- Currently running function: ", node_dict['name'])
+        if (self.trace_output == True):
+            print("\n-- Currently running function: ", node_dict['name'])
 
         ''' ---- Run statements in order ---- '''
         for statement_node in node_dict['statements']:
@@ -64,13 +66,16 @@ class Interpreter(InterpreterBase):
         # Run node's respective function
         match node_type:
             case 'vardef':
-                print("\nRUN_STATEMENT: This node is a variable definition")
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is a variable definition")
                 self.run_vardef(statement_node)
             case '=':
-                print("\nRUN_STATEMENT: This node is a variable assignment")
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is a variable assignment")
                 self.run_assign(statement_node)
             case 'fcall':
-                print("\nRUN_STATEMENT: This node is a function call")
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is a function call")
                 self.run_fcall(statement_node)
             case _:
                 super().error(
@@ -79,10 +84,11 @@ class Interpreter(InterpreterBase):
                 )
 
 
-    ''' *** Running Statement Types *** '''
+    ''' ---- Running Statement Types ---- '''
     # VARDEF
     def run_vardef(self, node):
-        print("\tInside RUN_VARDEF")
+        if (self.trace_output == True):
+            print("\tInside RUN_VARDEF")
         var_name = node.dict['name']
 
         # Check if variable has already been defined
@@ -95,11 +101,13 @@ class Interpreter(InterpreterBase):
         
         # Add new variable to PROGRAM_VARS           Initial value: None
         self.program_vars[var_name] = None
-        print("\t\tCurrent program_vars: ", self.program_vars)
+        if (self.trace_output == True):
+            print("\t\tCurrent program_vars: ", self.program_vars)
 
-    # VARIABLE ASSIGNMENT
+    ''' ---- Variable Assignment ---- '''
     def run_assign(self, node):
-        print("\tInside RUN_ASSIGN")
+        if (self.trace_output == True):
+            print("\tInside RUN_ASSIGN")
         node_dict = node.dict
         var_name = node_dict['name']
 
@@ -112,53 +120,72 @@ class Interpreter(InterpreterBase):
 
 
         # Calculate expression
-        ''' you must evaluate the expression/variable/value to the right of the equal sign
-        and then assiciate the variable name on the left of the equal sign with that resulting value
-        
-        when set y = x --> y points to the var node x (not the value)
-        '''
         node_expression = node_dict['expression']
-        # TODO: Check ALL of: expression, value, or variable
-
-        match node_expression.elem_type:
-            # If VALUE type
-            # case 'int':
-            #     self.program_vars[var_name] = self.get_value(node_expression)
-            #     print("\t\tUpdated program_vars: ", self.program_vars)
-            case 'string':
-                self.program_vars[var_name] = self.get_value(node_expression)
+        node_type = node_expression.elem_type
+        # If string value
+        if (node_type == 'string'):
+            self.program_vars[var_name] = self.get_value(node_expression)
+            if (self.trace_output == True):
                 print("\t\tUpdated program_vars: ", self.program_vars)
-            
-            # If EXPRESSION type
-            case 'int':
-                self.program_vars[var_name] = self.run_operation(node_expression)
-                print("\t\tUpdated program_vars: ", self.program_vars)
-            case '+':
-                self.program_vars[var_name] = self.run_operation(node_expression)
+        
+        # Operation to be computed
+        elif (node_type in ['int', 'var', '+', '-', '*', '/']):
+            self.program_vars[var_name] = self.run_operation(node_expression)
+            if (self.trace_output == True):
                 print("\t\tUpdated program_vars: ", self.program_vars)
 
-            # If FUNCTION CALL type
-            case 'fcall':
-                print("++ Functioncall, not here yet")
-
-            case _:
-                super().error(
+        # Function call
+        elif (node_type == 'fcall'):
+            if (self.trace_output == True):
+                print("++ function call, not here yet")
+            self.program_vars[var_name] = self.run_fcall(node.dict['expression'])
+            if (self.trace_output == True):
+                print("\t\tUpdated program_vars: ", self.program_vars)
+        else:
+            super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Unrecognized expression {node_expression.elem_type} in variable assignment for {var_name}"
-                )
+                    f"Unrecognized expression \"{node_expression.elem_type}\" in variable assignment for {var_name}"
+                ) 
 
-        # Update program_vars w/ new value TODO TODO for expressions + function calls
-
-    # FUNCTION CALL
+    ''' ---- Function Calls ---- '''
+    # Should return VALUE returned from the function
     def run_fcall(self, node):
-        print("\tInside RUN_FCALL")
+        if (self.trace_output == True):
+            print("\tInside RUN_FCALL\n\t--Node value: ", node)
+        
+        node_dict = node.dict
+        func_name = node_dict['name']
 
+        # Check that function has been defined
+        # TODO: don't hard-code this when there are custom function calls
+        allowable_functions = ['inputi', 'print']
+        if func_name not in allowable_functions:
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Function {node_dict['name']} has not been defined"
+            )
+        
+        # If INPUTI function
+        if func_name == 'inputi':
+            if (self.trace_output == True):
+                print("\tCalling inputi function")
+            if (len (node_dict['args']) > 1):
+                super().error(
+                    ErrorType.NAME_ERROR,
+                    f"No inputi() function found that takes more than 1 parameter"
+                )
+            return self.inputi(node_dict['args'])
+        
+        if func_name == 'print':
+            return self.printout()
+        
 
-    # OPERATION NODE
+    ''' ---- Evaluating Expressions / Operations ---- '''
         # Should return value of operation
         # If nested, call run_op on the nested one --> should return value of nested operation to be used in top level op
     def run_operation(self, node):
-        print("OPERATION: ", node.elem_type)
+        if (self.trace_output == True):
+            print("OPERATION: ", node.elem_type)
 
         node_type = node.elem_type
 
@@ -169,20 +196,30 @@ class Interpreter(InterpreterBase):
                     ErrorType.NAME_ERROR,
                     f"Variable {node.dict['name']} has not been declared"
                 )
-            # TODO: make sure variable value is not a string
+            # Check that variable type isn't a string
+            if (isinstance( self.program_vars[ node.dict['name'] ], str)):
+                super().error(
+                    ErrorType.NAME_ERROR,
+                    f"Incompatible types for arithmetic operation, attempted to use string (via existing variable {node.dict['name']} value)"
+                )
             return self.program_vars[ node.dict['name'] ]
 
         # BASE: if operand is a VALUE --> return that value
         if node_type == 'int':
             return self.get_value(node)
         
+        if node_type == 'fcall':
+            print("EXPRESSION USES A FUNCTION CALL")
+            return self.run_fcall(node)
+        
+        # If try to operate on a string --> error
         if node_type == 'string':
             super().error(
                 ErrorType.TYPE_ERROR,
                 "Incompatible types for arithmetic operation, attempted to use string"
             )
 
-        # Try operation types
+        # Try operation types, recursively call on operands
         if node_type == '+':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
@@ -190,9 +227,37 @@ class Interpreter(InterpreterBase):
         if node_type == '-':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1) - self.run_operation(op2)        
+            return self.run_operation(op1) - self.run_operation(op2) 
+        if node_type == '*':
+            op1 = node.dict['op1']
+            op2 = node.dict['op2']
+            return self.run_operation(op1) * self.run_operation(op2)   
+        if node_type == '/':
+            op1 = node.dict['op1']
+            op2 = node.dict['op2']
+            return self.run_operation(op1) / self.run_operation(op2)
 
 
     # Return value of value nodes
     def get_value(self, node):
-        return node.dict['val']
+        return node.dict['val']         # Maybe TODO: if this is None, add a check or throw an error instead of returning
+    
+    ''' ---- INPUTI function ---- '''
+    def inputi(self, prompt=[]):
+        if (prompt == []):
+            user_input = super().get_input()
+        else:
+            prompt_string = prompt[0].dict['val']
+            super().output(prompt_string)
+            user_input = super().get_input()
+
+        return int(user_input)
+        # CHECK - may need to check in future versions before converting to integer
+
+    ''' ---- PRINT function ---- '''
+    def printout(self, lst=[]):
+        # lst = list of strings to concatenate
+        # TODO: loop over, concatenate, then print
+            # Need to evaluate variables, expressions, + function calls
+        super().output("PRINT not implemented yet")
+        return None
