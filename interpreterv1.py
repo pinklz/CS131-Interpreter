@@ -265,6 +265,11 @@ class Interpreter(InterpreterBase):
             
             # # If variable, retrieve variable value
             elif node_type == 'var':
+                if element.dict['name'] not in self.program_vars:
+                    super().error(
+                        ErrorType.NAME_ERROR,
+                        f"Variable {element.dict['name']} has not been declared"
+                    )
                 string_to_output += str( self.program_vars[element.dict['name']])
 
         super().output(string_to_output)
