@@ -55,15 +55,25 @@ class Interpreter(InterpreterBase):
         func_name = node_dict['name']
         func_args = node_dict['args']
 
-        if (self.trace_output):
-                    print("\nINSIDE RUN_FCALL: Running {", func_name, "}")
-                    if (func_args == []):
-                        print("\tThis function has NO arguments")
-                    else:
-                        print("\tThis function has the following args: ")
-                        for arg in func_args:
-                            print("\t\t", arg)
 
+        ''' PRINT + INPTUTI handling'''
+        # Separate handling for: PRINT, INPUTI
+        if func_name == 'inputi':
+            if (self.trace_output == True):
+                print("\tCalling inputi function")
+            if (len (node_dict['args']) > 1):
+                super().error(
+                    ErrorType.NAME_ERROR,
+                    f"No inputi() function found that takes more than 1 parameter"
+                )
+            return self.inputi(node_dict['args'])
+        
+        if func_name == 'print':
+            return self.printout(node_dict['args'])
+        ''' END OF SEPARATE HANDLING '''
+
+
+        # For all other function calls: 
         if (func_name not in self.defined_functions):
             super().error(
                 ErrorType.NAME_ERROR,
@@ -85,12 +95,14 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR, 
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
-        # TODO: call run_func with 'func_to_run'
+
+        self.run_func( func_to_run )
 
 
     ''' ---- RUN FUNCTION ---- '''
     def run_func(self, func_node):
-        if (func_node.elem_type != 'func' and func_node.elem_type != 'fcall'):
+        # Should already be checked in run_fcall that function exists
+        if (func_node.elem_type != 'func'):
             super().error(
                 ErrorType.TYPE_ERROR,
                 "Non-function node passed into run_func"
@@ -98,35 +110,17 @@ class Interpreter(InterpreterBase):
         
         node_dict = func_node.dict
         if (self.trace_output == True):
-            print("\n-- Currently running function: ", node_dict['name'])
+            print("\n--------------------------------------------------------")
+            print("INSIDE RUN FUNC: Currently running function: ", node_dict['name'])
 
-        
-        func_name = node_dict['name']
+            if node_dict['args'] == []:
+                print("\tThis function has NO arguments")
+            else:
+                print("\tThis function has the following arguments: ")
+                for arg in node_dict['args']:
+                    print("\t\t", arg)
 
-        # Check that function has been defined
-        # TODO: don't hard-code this when there are custom function calls
-        allowable_functions = ['inputi', 'print', 'main']
-        if func_name not in allowable_functions:
-            super().error(
-                ErrorType.NAME_ERROR,
-                f"Function {node_dict['name']} has not been defined"
-            )
-        
-        # If INPUTI function
-        if func_name == 'inputi':
-            if (self.trace_output == True):
-                print("\tCalling inputi function")
-            if (len (node_dict['args']) > 1):
-                super().error(
-                    ErrorType.NAME_ERROR,
-                    f"No inputi() function found that takes more than 1 parameter"
-                )
-            return self.inputi(node_dict['args'])
-        
-        if func_name == 'print':
-            return self.printout(node_dict['args'])
 
-        # IF not PRINT or INPUTI, go through statements (instead of returning value)
         ''' ---- Run statements in order ---- '''
         for statement_node in node_dict['statements']:
             self.run_statement( statement_node )
@@ -295,6 +289,9 @@ class Interpreter(InterpreterBase):
 
     ''' ---- PRINT function ---- '''
     def printout(self, lst=[]):
+        if (self.trace_output):
+            print("\tINSIDE PRINTOUT")
+
         # lst = list of strings to concatenate
         # TODO: loop over, concatenate, then print
             # Need to evaluate variables, expressions, + function calls
