@@ -3,6 +3,7 @@ from intbase import *
 
 class Interpreter(InterpreterBase):
     program_vars = {}
+    defined_functions = {}      # should map function name to list of func nodes (for overloading)
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -29,6 +30,12 @@ class Interpreter(InterpreterBase):
         # Search through program functions to find the MAIN node
         main_node = None
         for func in self.ast.dict['functions']:
+            # Loop through all provided functions, add to dictionary of defined functions
+            func_name = func.dict['name']
+            if func_name not in self.defined_functions:
+                self.defined_functions[func_name] = []
+            self.defined_functions[func_name].append(func)
+            
             if (func.dict['name'] == 'main'):
                 main_node = func
         if (main_node == None):
@@ -36,9 +43,23 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR,
                 "No MAIN node found in program"
             )
-        
         # Run MAIN node
         self.run_func(main_node)
+
+    ''' ---- HANDLE fcall ---- '''
+    def run_fcall(self, func_node):
+        node_dict = func_node.dict
+        func_name = node_dict['name']
+
+        if (func_name not in self.defined_functions):
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Function {func_name} was not found / defined ",
+            )
+
+        # TODO: Implement overloading search, to find correct func node
+            # based on the given # of parameters
+
 
 
     ''' ---- RUN FUNCTION ---- '''
@@ -161,7 +182,7 @@ class Interpreter(InterpreterBase):
 
         # Function call
         elif (node_type == 'fcall'):
-            self.program_vars[var_name] = self.run_func(node.dict['expression'])    # TODO: check + replace w/ node_expression
+            self.program_vars[var_name] = self.run_func(node_expression)
             if (self.trace_output == True):
                 print("\t\tUpdated program_vars: ", self.program_vars)
         else:
@@ -227,7 +248,7 @@ class Interpreter(InterpreterBase):
         if node_type == '/':            # TODO: change this to // b/c it's supposed to be INTEGER division
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1) / self.run_operation(op2)
+            return self.run_operation(op1) // self.run_operation(op2)
 
 
     # Return value of value nodes
