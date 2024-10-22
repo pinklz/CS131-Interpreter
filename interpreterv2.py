@@ -26,6 +26,7 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR,
                 "Initial element type is not 'program' "
             )
+
         
         # Search through program functions to find the MAIN node
         main_node = None
@@ -36,6 +37,7 @@ class Interpreter(InterpreterBase):
                 self.defined_functions[func_name] = []
             self.defined_functions[func_name].append(func)
             
+            # Identify main_node to run aftter
             if (func.dict['name'] == 'main'):
                 main_node = func
         if (main_node == None):
@@ -43,6 +45,7 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR,
                 "No MAIN node found in program"
             )
+        
         # Run MAIN node
         self.run_func(main_node)
 
@@ -50,6 +53,16 @@ class Interpreter(InterpreterBase):
     def run_fcall(self, func_node):
         node_dict = func_node.dict
         func_name = node_dict['name']
+        func_args = node_dict['args']
+
+        if (self.trace_output):
+                    print("\nINSIDE RUN_FCALL: Running {", func_name, "}")
+                    if (func_args == []):
+                        print("\tThis function has NO arguments")
+                    else:
+                        print("\tThis function has the following args: ")
+                        for arg in func_args:
+                            print("\t\t", arg)
 
         if (func_name not in self.defined_functions):
             super().error(
@@ -57,9 +70,22 @@ class Interpreter(InterpreterBase):
                 f"Function {func_name} was not found / defined ",
             )
 
-        # TODO: Implement overloading search, to find correct func node
-            # based on the given # of parameters
+        # Based on the provided number of arguments in the function call
+            # Identify the correct (possibly overloaded) function definition to run
+        func_to_run = None
+        defined_funcs_found = self.defined_functions[func_name]
+        for func in defined_funcs_found:
+            args = func.dict['args']
+            if len(func_args) == len ( args ):
+                func_to_run = func
 
+        if (func_to_run == None):
+            # Wrong number of arguments for this function
+            super().error(
+                ErrorType.NAME_ERROR, 
+                f"Function { {func_name} } with { len(func_args)} parameters was not found"
+            )
+        # TODO: call run_func with 'func_to_run'
 
 
     ''' ---- RUN FUNCTION ---- '''
@@ -123,7 +149,7 @@ class Interpreter(InterpreterBase):
             case 'fcall':
                 if (self.trace_output == True):
                     print("\nRUN_STATEMENT: This node is a function call")
-                self.run_func(statement_node)
+                self.run_fcall(statement_node)
             case _:
                 super().error(
                     ErrorType.NAME_ERROR,
