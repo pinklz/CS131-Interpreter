@@ -47,13 +47,22 @@ class Interpreter(InterpreterBase):
             )
         
         # Run MAIN node
-        self.run_func(main_node)
+        self.run_func(main_node, [])
 
     ''' ---- HANDLE fcall ---- '''
     def run_fcall(self, func_node):
         node_dict = func_node.dict
         func_name = node_dict['name']
         func_args = node_dict['args']
+
+        if (self.trace_output):
+            if (func_args == []):
+                print("** RUN FCALL -- NO args provided")
+            else:
+                print("** RUN FCALL")
+                print("\tProvided arguments: ")
+                for arg in func_args:
+                    print("\t\t", arg)
 
 
         ''' PRINT + INPTUTI handling'''
@@ -96,11 +105,11 @@ class Interpreter(InterpreterBase):
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
 
-        self.run_func( func_to_run )
+        self.run_func( func_to_run , func_args)
 
 
     ''' ---- RUN FUNCTION ---- '''
-    def run_func(self, func_node):
+    def run_func(self, func_node, func_args):
         # Should already be checked in run_fcall that function exists
         if (func_node.elem_type != 'func'):
             super().error(
@@ -109,25 +118,33 @@ class Interpreter(InterpreterBase):
             )
         
         node_dict = func_node.dict
+        node_params = node_dict['args']
         if (self.trace_output == True):
-            print("\n--------------------------------------------------------")
-            print("INSIDE RUN FUNC: Currently running function: ", node_dict['name'])
+            print("--------------------------------------------------------")
+            print("INSIDE RUN_FUNC: Currently running function: ", node_dict['name'])
 
-            if node_dict['args'] == []:
-                print("\tThis function has NO arguments")
+            if node_params == []:
+                print("\tThis function has NO parameters")
             else:
-                print("\tThis function has the following arguments: ")
-                for arg in node_dict['args']:
+                print("\tThis function has the following paramters: ")
+                for arg in node_params:
                     print("\t\t", arg)
 
+        # TODO: DELETE BELOW
+        if (node_params != []):
+            print("+++++++++++ TESTING ZIP ++++++++++++")
+            for (var_name, var_value) in zip(node_params, func_args):
+                print("Want to pair: [", var_name, "] with value [", var_value, "]")
 
-        ''' ---- Run statements in order ---- '''
+
+        # Loop through function statements in order
         for statement_node in node_dict['statements']:
             self.run_statement( statement_node )
     
 
     ''' ---- RUN STATEMENT ---- '''
     def run_statement(self, statement_node):
+        # TODO: add cases for 'if', 'for', 'return'
         node_type = statement_node.elem_type
 
         # Run node's respective function
@@ -289,6 +306,7 @@ class Interpreter(InterpreterBase):
 
     ''' ---- PRINT function ---- '''
     def printout(self, lst=[]):
+        # TODO: print boolean values differently
         if (self.trace_output):
             print("\tINSIDE PRINTOUT")
 
