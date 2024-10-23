@@ -116,6 +116,9 @@ class Interpreter(InterpreterBase):
                 ErrorType.TYPE_ERROR,
                 "Non-function node passed into run_func"
             )
+
+        # Create dictionary to hold variables local to this function
+        func_vars = {}
         
         node_dict = func_node.dict
         node_params = node_dict['args']
@@ -135,6 +138,8 @@ class Interpreter(InterpreterBase):
             print("+++++++++++ TESTING ZIP ++++++++++++")
             for (var_name, var_value) in zip(node_params, func_args):
                 print("Want to pair: [", var_name, "] with value [", var_value, "]")
+                func_vars[var_name] = var_value
+
 
 
         # Loop through function statements in order
