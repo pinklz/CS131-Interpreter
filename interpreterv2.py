@@ -50,10 +50,11 @@ class Interpreter(InterpreterBase):
         return self.run_func(main_node, [])
 
     ''' ---- HANDLE fcall ---- '''
-    def run_fcall(self, func_node):
+    def run_fcall(self, func_node, calling_func_vars):
+        # calling_func_vars = variables defined by the calling function (where the statement was)
         node_dict = func_node.dict
         func_name = node_dict['name']
-        func_args = node_dict['args']
+        func_args = node_dict['args']   # arguments passed into the function call
 
         if (self.trace_output):
             if (func_args == []):
@@ -78,7 +79,7 @@ class Interpreter(InterpreterBase):
             return self.inputi(node_dict['args'])
         
         if func_name == 'print':
-            return self.printout(node_dict['args'])
+            return self.printout(calling_func_vars, node_dict['args'])
         ''' END OF SEPARATE HANDLING '''
 
 
@@ -105,7 +106,14 @@ class Interpreter(InterpreterBase):
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
 
-        return self.run_func( func_to_run , func_args)
+        print("--- Variables defined by calling function: ")
+        for var in calling_func_vars:
+            print("Variable name: ", var, "\tValue: ", calling_func_vars[var])
+
+        # TODO: for each argument
+            # if variable - check calling_func_args
+            # if op, call run_operation
+        return self.run_func( func_to_run , func_args )
 
 
     ''' ---- RUN FUNCTION ---- '''
@@ -146,11 +154,11 @@ class Interpreter(InterpreterBase):
 
         # Loop through function statements in order
         for statement_node in node_dict['statements']:
-            self.run_statement( statement_node )
+            self.run_statement( statement_node , func_vars)
     
 
     ''' ---- RUN STATEMENT ---- '''
-    def run_statement(self, statement_node):
+    def run_statement(self, statement_node, func_vars):
         # TODO: add cases for 'if', 'for', 'return'
         node_type = statement_node.elem_type
 
@@ -159,15 +167,15 @@ class Interpreter(InterpreterBase):
             case 'vardef':
                 if (self.trace_output == True):
                     print("\nRUN_STATEMENT: This node is a variable definition")
-                self.run_vardef(statement_node)
+                self.run_vardef(statement_node, func_vars)
             case '=':
                 if (self.trace_output == True):
                     print("\nRUN_STATEMENT: This node is a variable assignment")
-                self.run_assign(statement_node)
+                self.run_assign(statement_node, func_vars)
             case 'fcall':
                 if (self.trace_output == True):
                     print("\nRUN_STATEMENT: This node is a function call")
-                self.run_fcall(statement_node)
+                self.run_fcall(statement_node, func_vars)
             case _:
                 super().error(
                     ErrorType.NAME_ERROR,
@@ -177,35 +185,35 @@ class Interpreter(InterpreterBase):
 
     ''' ---- Running Statement Types ---- '''
     # VARDEF
-    def run_vardef(self, node):
+    def run_vardef(self, node, func_vars):
         if (self.trace_output == True):
             print("\tInside RUN_VARDEF")
         var_name = node.dict['name']
 
         # Check if variable has already been defined
-        if var_name in self.program_vars:
+        if var_name in func_vars:
             super().error(
                 ErrorType.NAME_ERROR,
                 f"Variable {var_name} defined more than once"
             )
 
-        # Add new variable to PROGRAM_VARS           Initial value: None
-        self.program_vars[var_name] = None
+        # Add new variable to func_vars           Initial value: None
+        func_vars[var_name] = None
         if (self.trace_output == True):
-            print("\t\tCurrent program_vars: ", self.program_vars)
+            print("\t\tCurrent func_vars: ", func_vars)
 
     ''' ---- Variable Assignment ---- '''
-    def run_assign(self, node):
+    def run_assign(self, node, func_vars):
         if (self.trace_output == True):
             print("\tInside RUN_ASSIGN")
         node_dict = node.dict
         var_name = node_dict['name']
 
         # Check that variable has been declared
-        if var_name not in self.program_vars:
+        if var_name not in func_vars:
             super().error(
                 ErrorType.NAME_ERROR,
-                f"Variable {var_name} has not been declared"
+                f"Variable {var_name} has not been declared w/in function scope"
             )
 
 
@@ -214,21 +222,21 @@ class Interpreter(InterpreterBase):
         node_type = node_expression.elem_type
         # If string value
         if (node_type == 'string'):
-            self.program_vars[var_name] = self.get_value(node_expression)
+            func_vars[var_name] = self.get_value(node_expression)
             if (self.trace_output == True):
-                print("\t\tUpdated program_vars: ", self.program_vars)
+                print("\t\tUpdated func_vars: ", func_vars)
         
         # Operation to be computed
         elif (node_type in ['int', 'var', '+', '-', '*', '/']):
-            self.program_vars[var_name] = self.run_operation(node_expression)
+            func_vars[var_name] = self.run_operation(node_expression, func_vars)
             if (self.trace_output == True):
-                print("\t\tUpdated program_vars: ", self.program_vars)
+                print("\t\tUpdated func_vars: ", func_vars)
 
         # Function call
         elif (node_type == 'fcall'):
-            self.program_vars[var_name] = self.run_fcall(node_expression)
+            func_vars[var_name] = self.run_fcall(node_expression, func_vars)
             if (self.trace_output == True):
-                print("\t\tUpdated program_vars: ", self.program_vars)
+                print("\t\tUpdated func_vars: ", func_vars)
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
@@ -239,7 +247,7 @@ class Interpreter(InterpreterBase):
     ''' ---- Evaluating Expressions / Operations ---- '''
         # Should return value of operation
         # If nested, call run_op on the nested one --> should return value of nested operation to be used in top level op
-    def run_operation(self, node):
+    def run_operation(self, node, func_vars):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
 
@@ -247,18 +255,18 @@ class Interpreter(InterpreterBase):
 
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
-            if node.dict['name'] not in self.program_vars:
+            if node.dict['name'] not in func_vars:
                 super().error(
                     ErrorType.NAME_ERROR,
                     f"Variable {node.dict['name']} has not been declared"
                 )
             # Check that variable type isn't a string
-            if (isinstance( self.program_vars[ node.dict['name'] ], str)):
+            if (isinstance( func_vars[ node.dict['name'] ], str)):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for arithmetic operation, attempted to use string (via existing variable {node.dict['name']} value)"
                 )
-            return self.program_vars[ node.dict['name'] ]
+            return func_vars[ node.dict['name'] ]
 
         # BASE: if operand is a VALUE --> return that value
         if node_type == 'int':
@@ -267,7 +275,7 @@ class Interpreter(InterpreterBase):
         if node_type == 'fcall':
             if (self.trace_output == True):
                 print("EXPRESSION USES A FUNCTION CALL")
-            return self.run_fcall(node)
+            return self.run_fcall(node, func_vars)
         
         # If try to operate on a string --> error
         if node_type == 'string':
@@ -280,19 +288,19 @@ class Interpreter(InterpreterBase):
         if node_type == '+':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1) + self.run_operation(op2)
+            return self.run_operation(op1, func_vars) + self.run_operation(op2, func_vars)
         if node_type == '-':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1) - self.run_operation(op2) 
+            return self.run_operation(op1, func_vars) - self.run_operation(op2, func_vars) 
         if node_type == '*':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1) * self.run_operation(op2)   
+            return self.run_operation(op1, func_vars) * self.run_operation(op2, func_vars)   
         if node_type == '/':            # TODO: change this to // b/c it's supposed to be INTEGER division
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1) // self.run_operation(op2)
+            return self.run_operation(op1, func_vars) // self.run_operation(op2, func_vars)
 
 
     # Return value of value nodes
@@ -312,14 +320,12 @@ class Interpreter(InterpreterBase):
         # CHECK - may need to check in future versions before converting to integer
 
     ''' ---- PRINT function ---- '''
-    def printout(self, lst=[]):
+    def printout(self, func_vars, lst=[]):
         # TODO: print boolean values differently
         if (self.trace_output):
             print("\tINSIDE PRINTOUT")
 
         # lst = list of strings to concatenate
-        # TODO: loop over, concatenate, then print
-            # Need to evaluate variables, expressions, + function calls
         string_to_output = ""       # TODO: check if 0 arguments should still print "" or just return
         for element in lst:
             if (self.trace_output == True):
@@ -328,18 +334,16 @@ class Interpreter(InterpreterBase):
             if node_type == 'string':
                 string_to_output += element.dict['val']
             elif (node_type in ['int', '+', '-', '*', '/']):
-                string_to_output += str (self.run_operation(element))
-            # elif node_type == 'int':
-            #     string_to_output += str( element.dict['val'] )
+                string_to_output += str (self.run_operation(element, func_vars))
             
             # # If variable, retrieve variable value
             elif node_type == 'var':
-                if element.dict['name'] not in self.program_vars:
+                if element.dict['name'] not in func_vars:
                     super().error(
                         ErrorType.NAME_ERROR,
                         f"Variable {element.dict['name']} has not been declared (in print statement)"
                     )
-                string_to_output += str( self.program_vars[element.dict['name']])
+                string_to_output += str( func_vars[element.dict['name']])
 
         super().output(string_to_output)
         return None
