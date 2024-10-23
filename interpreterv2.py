@@ -47,7 +47,7 @@ class Interpreter(InterpreterBase):
             )
         
         # Run MAIN node
-        self.run_func(main_node, [])
+        return self.run_func(main_node, [])
 
     ''' ---- HANDLE fcall ---- '''
     def run_fcall(self, func_node):
@@ -105,7 +105,7 @@ class Interpreter(InterpreterBase):
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
 
-        self.run_func( func_to_run , func_args)
+        return self.run_func( func_to_run , func_args)
 
 
     ''' ---- RUN FUNCTION ---- '''
@@ -135,10 +135,12 @@ class Interpreter(InterpreterBase):
 
         # TODO: DELETE BELOW
         if (node_params != []):
-            print("+++++++++++ TESTING ZIP ++++++++++++")
+            # print("+++++++++++ TESTING ZIP ++++++++++++")
             for (var_name, var_value) in zip(node_params, func_args):
+                # TODO: need different checks for types of nodes in func_args
+                    # could be values, variables, or expressions
                 print("Want to pair: [", var_name, "] with value [", var_value, "]")
-                func_vars[var_name] = var_value
+                # func_vars[var_name.dict['name']] = var_value.dict['val']
 
 
 
@@ -224,7 +226,7 @@ class Interpreter(InterpreterBase):
 
         # Function call
         elif (node_type == 'fcall'):
-            self.program_vars[var_name] = self.run_func(node_expression)
+            self.program_vars[var_name] = self.run_fcall(node_expression)
             if (self.trace_output == True):
                 print("\t\tUpdated program_vars: ", self.program_vars)
         else:
