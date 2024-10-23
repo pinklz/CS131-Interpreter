@@ -267,7 +267,7 @@ class Interpreter(InterpreterBase):
         if node_type == 'fcall':
             if (self.trace_output == True):
                 print("EXPRESSION USES A FUNCTION CALL")
-            return self.run_func(node)
+            return self.run_fcall(node)
         
         # If try to operate on a string --> error
         if node_type == 'string':
