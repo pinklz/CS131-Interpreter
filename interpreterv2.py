@@ -65,7 +65,7 @@ class Interpreter(InterpreterBase):
                 for arg in func_args:
                     print("\t\t", arg)
 
-
+        # TODO: put these outside this function
         ''' PRINT + INPTUTI handling'''
         # Separate handling for: PRINT, INPUTI
         if func_name == 'inputi':
@@ -106,10 +106,10 @@ class Interpreter(InterpreterBase):
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
 
-        if self.trace_output:
-            print("--- Variables defined by calling function: ")
-            for var in calling_func_vars:
-                print("Variable name: ", var, "\tValue: ", calling_func_vars[var])
+        # if self.trace_output:
+        #     print("--- Variables defined by calling function: ")
+        #     for var in calling_func_vars:
+        #         print("Variable name: ", var, "\tValue: ", calling_func_vars[var])
 
         func_arg_values = []
 
@@ -123,7 +123,7 @@ class Interpreter(InterpreterBase):
             elif arg.elem_type == 'var':
                 # Check variable is defining within calling function
                 if arg.dict['name'] in calling_func_vars:
-                    func_arg_values.append( calling_func_vars[arg.dict['name']] )       # Add corresponding value to argument list
+                    func_arg_values.append( calling_func_vars[arg.dict['name']] )
                 else: 
                     super().error(
                         ErrorType.NAME_ERROR,
@@ -238,14 +238,14 @@ class Interpreter(InterpreterBase):
         # Calculate expression
         node_expression = node_dict['expression']
         node_type = node_expression.elem_type
-        # If string value
-        if (node_type == 'string'):
+        # If string, int, or boolean value
+        if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
             func_vars[var_name] = self.get_value(node_expression)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
         
         # Operation to be computed
-        elif (node_type in ['int', 'var', '+', '-', '*', '/']):
+        elif (node_type in ['var', '+', '-', '*', '/']):
             func_vars[var_name] = self.run_operation(node_expression, func_vars)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
@@ -315,7 +315,7 @@ class Interpreter(InterpreterBase):
             op1 = node.dict['op1']
             op2 = node.dict['op2']
             return self.run_operation(op1, func_vars) * self.run_operation(op2, func_vars)   
-        if node_type == '/':            # TODO: change this to // b/c it's supposed to be INTEGER division
+        if node_type == '/':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
             return self.run_operation(op1, func_vars) // self.run_operation(op2, func_vars)
