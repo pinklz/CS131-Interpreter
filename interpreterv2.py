@@ -106,14 +106,36 @@ class Interpreter(InterpreterBase):
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
 
-        print("--- Variables defined by calling function: ")
-        for var in calling_func_vars:
-            print("Variable name: ", var, "\tValue: ", calling_func_vars[var])
+        if self.trace_output:
+            print("--- Variables defined by calling function: ")
+            for var in calling_func_vars:
+                print("Variable name: ", var, "\tValue: ", calling_func_vars[var])
+
+        func_arg_values = []
 
         # TODO: for each argument
             # if variable - check calling_func_args
             # if op, call run_operation
-        return self.run_func( func_to_run , func_args )
+        for arg in func_args:
+            # If it is already a value, add that value
+            if arg.elem_type in ['string', 'int', 'bool']:
+                func_arg_values.append( self.get_value (arg) )
+            elif arg.elem_type == 'var':
+                # Check variable is defining within calling function
+                if arg.dict['name'] in calling_func_vars:
+                    func_arg_values.append( calling_func_vars[arg.dict['name']] )       # Add corresponding value to argument list
+                else: 
+                    super().error(
+                        ErrorType.NAME_ERROR,
+                        f"Variable {arg.dict['name']} not found - tried to pass in as function argument to { {func_to_run.dict['name']} }"
+                    )
+            else:
+                # TODO: if error, likely is in missing a case here
+                func_arg_values.append( self.run_operation (arg, calling_func_vars) )
+
+
+
+        return self.run_func( func_to_run , func_arg_values )
 
 
     ''' ---- RUN FUNCTION ---- '''
@@ -141,14 +163,10 @@ class Interpreter(InterpreterBase):
                 for arg in node_params:
                     print("\t\t", arg)
 
-        # TODO: DELETE BELOW
+        # Map argument values to the parameter names
         if (node_params != []):
-            # print("+++++++++++ TESTING ZIP ++++++++++++")
             for (var_name, var_value) in zip(node_params, func_args):
-                # TODO: need different checks for types of nodes in func_args
-                    # could be values, variables, or expressions
-                print("Want to pair: [", var_name, "] with value [", var_value, "]")
-                # func_vars[var_name.dict['name']] = var_value.dict['val']
+                func_vars[var_name.dict['name']] = var_value
 
 
 
