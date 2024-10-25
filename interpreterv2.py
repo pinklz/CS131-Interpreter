@@ -361,6 +361,8 @@ class Interpreter(InterpreterBase):
             op2 = node.dict['op2']
             return self.run_int_operation(op1, func_vars) // self.run_int_operation(op2, func_vars)
 
+
+    ''' ---- Calculate BOOLEAN OPERATION ---- '''
     def run_bool_operation(self, node, func_vars):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
@@ -457,25 +459,35 @@ class Interpreter(InterpreterBase):
             node_type = element.elem_type
             if node_type == 'string':
                 string_to_output += element.dict['val']
+            elif node_type == 'bool':
+                result = element.dict['val']
+                if result is True:
+                    string_to_output += "true"
+                if result is False:
+                    string_to_output += "false"
             elif node_type == 'int':
                 string_to_output += str(element.dict['val'])
             # # If variable, retrieve variable value
             elif node_type == 'var':
                 # will raise error if variable hasn't been defined
                 val = self.get_variable_value(element, func_vars)
-                # Separate handling to print true / false in all lower case
-                # if val != 1 and val == True:
-                #     string_to_output += "true"
-                # elif val != 0 and val == False:
-                #     string_to_output += "false"
-                # else:
-                #     string_to_output += str( val )
-                string_to_output += str(val)
+                if val is True:
+                    string_to_output += "true"
+                elif val is False:
+                    string_to_output += "false"
+                else:
+                    string_to_output += str (val)
+
             elif (node_type in self.INT_OPERATIONS):
                 string_to_output += str (self.run_int_operation(element, func_vars))
             
             elif (node_type in self.BOOL_OPERATIONS):
-                string_to_output += str (self.run_bool_operation(element, func_vars))
+                result = self.run_bool_operation(element, func_vars)
+                if result is True:
+                    string_to_output += "true"
+                if result is False:
+                    string_to_output += "false"
+                # string_to_output += str (self.run_bool_operation(element, func_vars))
 
             # TODO: print FCALL
 
