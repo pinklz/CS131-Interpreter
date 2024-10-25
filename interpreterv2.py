@@ -6,7 +6,7 @@ class Interpreter(InterpreterBase):
     program_vars = {}
     defined_functions = {}      # should map function name to list of func nodes (for overloading)
 
-    INT_OPERATIONS = ['+', '-', '*', '/', 'neg', 'var']
+    INT_OPERATIONS = ['+', '-', '*', '/', 'neg']
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -240,6 +240,7 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", func_vars)
 
+
     ''' ---- Variable Assignment ---- '''
     def run_assign(self, node, func_vars):
         if (self.trace_output == True):
@@ -390,9 +391,6 @@ class Interpreter(InterpreterBase):
                 string_to_output += element.dict['val']
             elif node_type == 'int':
                 string_to_output += str(element.dict['val'])
-            elif (node_type in self.INT_OPERATIONS):
-                string_to_output += str (self.run_int_operation(element, func_vars))
-            
             # # If variable, retrieve variable value
             elif node_type == 'var':
                 # will raise error if variable hasn't been defined
@@ -405,6 +403,8 @@ class Interpreter(InterpreterBase):
                 # else:
                 #     string_to_output += str( val )
                 string_to_output += str(val)
+            elif (node_type in self.INT_OPERATIONS):
+                string_to_output += str (self.run_int_operation(element, func_vars))
 
             # TODO: print FCALL
 
