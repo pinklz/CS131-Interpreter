@@ -200,11 +200,13 @@ class Interpreter(InterpreterBase):
                 if (return_exp_type in ['int', 'string', 'bool']):
                     return self.get_value(return_expression)
                 
-                # TODO: this is where I left off
                 # If returning a VARIABLE value
                 if (return_exp_type == 'var'):
                     return self.get_variable_value(return_expression, func_vars)
                 
+                # If returning an OPERATION
+                if (return_exp_type in ['+', '-', '*', '/']):
+                    return self.run_operation( return_expression, func_vars )
                 else:
                     print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
 
