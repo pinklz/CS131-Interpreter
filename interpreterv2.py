@@ -113,7 +113,6 @@ class Interpreter(InterpreterBase):
 
         func_arg_values = []
 
-        # TODO: for each argument
             # if variable - check calling_func_args
             # if op, call run_operation
         for arg in func_args:
@@ -123,10 +122,17 @@ class Interpreter(InterpreterBase):
             elif arg.elem_type == 'var':
                 # Check variable is defining within calling function + get value if so
                 func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
-            else:
-                # TODO: if error, likely is in missing a case here
+            
+            # Passed in EXPRESION
+                # Integer operation
+            elif arg.elem_type in self.INT_OPERATIONS:
                 func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
-
+                # Boolean operation
+            elif arg.elem_type in self.BOOL_OPERATIONS:
+                func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
+            else:
+                print("***********************\n\t IN RUN_FCALL, don't know how to process arguments")
+                # TODO: if error, likely is in missing a case here
 
 
         return self.run_func( func_to_run , func_arg_values )
@@ -412,10 +418,6 @@ class Interpreter(InterpreterBase):
             op2 = node.dict['op2']
             return ( self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars) )
 
-
-        # else:
-        #     print(" ** IN PROGRESS - working on other boolean operations ** ")
-        #     print("\tThis was the node passed in: ", node)
 
 
 
