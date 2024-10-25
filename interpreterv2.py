@@ -309,18 +309,19 @@ class Interpreter(InterpreterBase):
         if node_type == 'var':
             self.get_variable_value(node, func_vars)
             # Check that variable type isn't a string
-            if (isinstance( func_vars[ node.dict['name'] ], str)):
+            val = func_vars[ node.dict['name'] ]
+            if (isinstance( val,  str)):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for arithmetic operation, attempted to use string (via existing variable {node.dict['name']} value)"
                 )
-            # # Check that variable type isn't a boolean
-            # if (isinstance( func_vars[ node.dict['name'] ], bool)):
-            #     super().error(
-            #         ErrorType.TYPE_ERROR,
-            #         f"Incompatible types for arithmetic operation, attempted to use boolean (via existing variable {node.dict['name']} value)"
-            #     )
-            return func_vars[ node.dict['name'] ]
+            # Check if boolean
+            if (val is True) or (val is False):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for arithmetic operation, attempted to use boolean (via existing variable {node.dict['name']} value)"
+                )
+            return val
 
         # BASE: if operand is a VALUE --> return that value
         if node_type == 'int':
