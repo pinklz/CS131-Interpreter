@@ -163,7 +163,14 @@ class Interpreter(InterpreterBase):
 
         # Loop through function statements in order
         for statement_node in node_dict['statements']:
+            if (statement_node.elem_type == 'return'):
+                return self.run_statement (statement_node, func_vars)
+            
+            # Otherwise, just execute the statement
             self.run_statement( statement_node , func_vars)
+
+        # If exit list of statements without reaching a return statement, return NIL
+        return Element("nil")
     
 
     ''' ---- RUN STATEMENT ---- '''
@@ -187,7 +194,6 @@ class Interpreter(InterpreterBase):
                 self.run_fcall(statement_node, func_vars)
             case 'return':
                 return_expression = statement_node.dict['expression']
-                print(" -- THIS IS A RETURN STATEMENT: \n\there is the expression: ", statement_node.dict['expression'])
                 return_exp_type = return_expression.elem_type
 
                 # If returning a CONSTANT value
@@ -196,7 +202,11 @@ class Interpreter(InterpreterBase):
                 
                 # TODO: this is where I left off
                 # If returning a VARIABLE value
-                # if (return_exp_type == 'var'):
+                if (return_exp_type == 'var'):
+                    return self.get_variable_value(return_expression, func_vars)
+                
+                else:
+                    print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
 
             case _:
                 super().error(
@@ -367,6 +377,8 @@ class Interpreter(InterpreterBase):
             elif node_type == 'var':
                 # will raise error if variable hasn't been defined
                 string_to_output += str( self.get_variable_value(element, func_vars) )
+
+            # TODO: print FCALL
 
         super().output(string_to_output)
         return Element("nil")
