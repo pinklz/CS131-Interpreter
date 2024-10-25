@@ -124,7 +124,7 @@ class Interpreter(InterpreterBase):
                 func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
             else:
                 # TODO: if error, likely is in missing a case here
-                func_arg_values.append( self.run_operation (arg, calling_func_vars) )
+                func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
 
 
 
@@ -210,7 +210,7 @@ class Interpreter(InterpreterBase):
                 
                 # If returning an OPERATION
                 if (return_exp_type in self.INT_OPERATIONS):
-                    return self.run_operation( return_expression, func_vars )
+                    return self.run_int_operation( return_expression, func_vars )
                 else:
                     print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
 
@@ -261,7 +261,7 @@ class Interpreter(InterpreterBase):
         
         # Operation to be computed
         elif (node_type in self.INT_OPERATIONS):
-            func_vars[var_name] = self.run_operation(node_expression, func_vars)
+            func_vars[var_name] = self.run_int_operation(node_expression, func_vars)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
 
@@ -286,7 +286,7 @@ class Interpreter(InterpreterBase):
     ''' ---- Evaluating Expressions / Operations ---- '''
         # Should return value of operation
         # If nested, call run_op on the nested one --> should return value of nested operation to be used in top level op
-    def run_operation(self, node, func_vars):
+    def run_int_operation(self, node, func_vars):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
 
@@ -301,12 +301,12 @@ class Interpreter(InterpreterBase):
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for arithmetic operation, attempted to use string (via existing variable {node.dict['name']} value)"
                 )
-            # Check that variable type isn't a boolean
-            if (isinstance( func_vars[ node.dict['name'] ], bool)):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Incompatible types for arithmetic operation, attempted to use boolean (via existing variable {node.dict['name']} value)"
-                )
+            # # Check that variable type isn't a boolean
+            # if (isinstance( func_vars[ node.dict['name'] ], bool)):
+            #     super().error(
+            #         ErrorType.TYPE_ERROR,
+            #         f"Incompatible types for arithmetic operation, attempted to use boolean (via existing variable {node.dict['name']} value)"
+            #     )
             return func_vars[ node.dict['name'] ]
 
         # BASE: if operand is a VALUE --> return that value
@@ -327,25 +327,25 @@ class Interpreter(InterpreterBase):
 
         # UNARY operation (integer negation)
         if node_type == 'neg':
-            return -( self.run_operation( node.dict['op1'], func_vars))
+            return -( self.run_int_operation( node.dict['op1'], func_vars))
 
         # Try operation types, recursively call on operands
         if node_type == '+':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1, func_vars) + self.run_operation(op2, func_vars)
+            return self.run_int_operation(op1, func_vars) + self.run_int_operation(op2, func_vars)
         if node_type == '-':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1, func_vars) - self.run_operation(op2, func_vars) 
+            return self.run_int_operation(op1, func_vars) - self.run_int_operation(op2, func_vars) 
         if node_type == '*':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1, func_vars) * self.run_operation(op2, func_vars)   
+            return self.run_int_operation(op1, func_vars) * self.run_int_operation(op2, func_vars)   
         if node_type == '/':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1, func_vars) // self.run_operation(op2, func_vars)
+            return self.run_int_operation(op1, func_vars) // self.run_int_operation(op2, func_vars)
 
 
     # Return value of value nodes
@@ -391,19 +391,20 @@ class Interpreter(InterpreterBase):
             elif node_type == 'int':
                 string_to_output += str(element.dict['val'])
             elif (node_type in self.INT_OPERATIONS):
-                string_to_output += str (self.run_operation(element, func_vars))
+                string_to_output += str (self.run_int_operation(element, func_vars))
             
             # # If variable, retrieve variable value
             elif node_type == 'var':
                 # will raise error if variable hasn't been defined
                 val = self.get_variable_value(element, func_vars)
                 # Separate handling to print true / false in all lower case
-                if val != 1 and val == True:
-                    string_to_output += "true"
-                elif val != 0 and val == False:
-                    string_to_output += "false"
-                else:
-                    string_to_output += str( val )
+                # if val != 1 and val == True:
+                #     string_to_output += "true"
+                # elif val != 0 and val == False:
+                #     string_to_output += "false"
+                # else:
+                #     string_to_output += str( val )
+                string_to_output += str(val)
 
             # TODO: print FCALL
 
