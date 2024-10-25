@@ -1,5 +1,6 @@
 from brewparse import parse_program
 from intbase import *
+from element import Element
 
 class Interpreter(InterpreterBase):
     program_vars = {}
@@ -106,10 +107,6 @@ class Interpreter(InterpreterBase):
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
 
-        # if self.trace_output:
-        #     print("--- Variables defined by calling function: ")
-        #     for var in calling_func_vars:
-        #         print("Variable name: ", var, "\tValue: ", calling_func_vars[var])
 
         func_arg_values = []
 
@@ -121,14 +118,8 @@ class Interpreter(InterpreterBase):
             if arg.elem_type in ['string', 'int', 'bool']:
                 func_arg_values.append( self.get_value (arg) )
             elif arg.elem_type == 'var':
-                # Check variable is defining within calling function
-                if arg.dict['name'] in calling_func_vars:
-                    func_arg_values.append( calling_func_vars[arg.dict['name']] )
-                else: 
-                    super().error(
-                        ErrorType.NAME_ERROR,
-                        f"Variable {arg.dict['name']} not found - tried to pass in as function argument to { {func_to_run.dict['name']} }"
-                    )
+                # Check variable is defining within calling function + get value if so
+                func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
             else:
                 # TODO: if error, likely is in missing a case here
                 func_arg_values.append( self.run_operation (arg, calling_func_vars) )
@@ -194,6 +185,19 @@ class Interpreter(InterpreterBase):
                 if (self.trace_output == True):
                     print("\nRUN_STATEMENT: This node is a function call")
                 self.run_fcall(statement_node, func_vars)
+            case 'return':
+                return_expression = statement_node.dict['expression']
+                print(" -- THIS IS A RETURN STATEMENT: \n\there is the expression: ", statement_node.dict['expression'])
+                return_exp_type = return_expression.elem_type
+
+                # If returning a CONSTANT value
+                if (return_exp_type in ['int', 'string', 'bool']):
+                    return self.get_value(return_expression)
+                
+                # TODO: this is where I left off
+                # If returning a VARIABLE value
+                # if (return_exp_type == 'var'):
+
             case _:
                 super().error(
                     ErrorType.NAME_ERROR,
@@ -228,12 +232,7 @@ class Interpreter(InterpreterBase):
         var_name = node_dict['name']
 
         # Check that variable has been declared
-        if var_name not in func_vars:
-            super().error(
-                ErrorType.NAME_ERROR,
-                f"Variable {var_name} has not been declared w/in function scope"
-            )
-
+        self.get_variable_value(node, func_vars)
 
         # Calculate expression
         node_expression = node_dict['expression']
@@ -273,16 +272,18 @@ class Interpreter(InterpreterBase):
 
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
-            if node.dict['name'] not in func_vars:
-                super().error(
-                    ErrorType.NAME_ERROR,
-                    f"Variable {node.dict['name']} has not been declared"
-                )
+            self.get_variable_value(node, func_vars)
             # Check that variable type isn't a string
             if (isinstance( func_vars[ node.dict['name'] ], str)):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for arithmetic operation, attempted to use string (via existing variable {node.dict['name']} value)"
+                )
+            # Check that variable type isn't a boolean
+            if (isinstance( func_vars[ node.dict['name'] ], bool)):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for arithmetic operation, attempted to use boolean (via existing variable {node.dict['name']} value)"
                 )
             return func_vars[ node.dict['name'] ]
 
@@ -325,6 +326,15 @@ class Interpreter(InterpreterBase):
     def get_value(self, node):
         return node.dict['val']         # Maybe TODO: if this is None, add a check or throw an error instead of returning
     
+    def get_variable_value(self, node, defined_vars):
+        var_name = node.dict['name']
+        if var_name not in defined_vars:
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Variable {var_name} has not been declared w/in function scope"
+            )
+        return defined_vars[var_name]
+    
     ''' ---- INPUTI function ---- '''
     def inputi(self, prompt=[]):
         if (prompt == []):
@@ -339,7 +349,6 @@ class Interpreter(InterpreterBase):
 
     ''' ---- PRINT function ---- '''
     def printout(self, func_vars, lst=[]):
-        # TODO: print boolean values differently
         if (self.trace_output):
             print("\tINSIDE PRINTOUT")
 
@@ -356,12 +365,8 @@ class Interpreter(InterpreterBase):
             
             # # If variable, retrieve variable value
             elif node_type == 'var':
-                if element.dict['name'] not in func_vars:
-                    super().error(
-                        ErrorType.NAME_ERROR,
-                        f"Variable {element.dict['name']} has not been declared (in print statement)"
-                    )
-                string_to_output += str( func_vars[element.dict['name']])
+                # will raise error if variable hasn't been defined
+                string_to_output += str( self.get_variable_value(element, func_vars) )
 
         super().output(string_to_output)
-        return None
+        return Element("nil")
