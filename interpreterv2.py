@@ -7,6 +7,7 @@ class Interpreter(InterpreterBase):
     defined_functions = {}      # should map function name to list of func nodes (for overloading)
 
     INT_OPERATIONS = ['+', '-', '*', '/', 'neg']
+    BOOL_OPERATIONS = ['!', '||', '&&']
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -211,8 +212,13 @@ class Interpreter(InterpreterBase):
                 # If returning an OPERATION
                 if (return_exp_type in self.INT_OPERATIONS):
                     return self.run_int_operation( return_expression, func_vars )
-                else:
-                    print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
+                
+                # If returning result of BOOLEAN operation
+                if (return_exp_type in self.BOOL_OPERATIONS):
+                    return self.run_bool_operation( return_expression, func_vars )
+                
+                # else:
+                #     print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
 
             case _:
                 super().error(
@@ -260,9 +266,15 @@ class Interpreter(InterpreterBase):
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
         
-        # Operation to be computed
+        # Integer Operation to be computed
         elif (node_type in self.INT_OPERATIONS):
             func_vars[var_name] = self.run_int_operation(node_expression, func_vars)
+            if (self.trace_output == True):
+                print("\t\tUpdated func_vars: ", func_vars)
+
+        # Boolean Operation to be computed
+        elif (node_type in self.BOOL_OPERATIONS):
+            func_vars[var_name] = self.run_bool_operation(node_expression, func_vars)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
 
@@ -348,6 +360,61 @@ class Interpreter(InterpreterBase):
             op2 = node.dict['op2']
             return self.run_int_operation(op1, func_vars) // self.run_int_operation(op2, func_vars)
 
+    def run_bool_operation(self, node, func_vars):
+        if (self.trace_output == True):
+            print("OPERATION: ", node.elem_type)
+
+        node_type = node.elem_type
+
+         # BASE: if operand is a VARIABLE --> return that variable's value
+        if node_type == 'var':
+            self.get_variable_value(node, func_vars)
+
+            if (isinstance( func_vars[ node.dict['name'] ], str)):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for BOOLEAN operation, attempted to use string (via existing variable {node.dict['name']} value)"
+                )
+
+            # CHECK: this should check for integers, and even exlude 0 and 1
+            if ( func_vars[ node.dict['name']] is not True) and ( func_vars[ node.dict['name']] is not False):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"FOUND IT\nIncompatible types for BOOLEAN operation, attempted to use string (via existing variable {node.dict['name']} value)"
+                )
+            return func_vars[ node.dict['name'] ]
+        
+        if node_type == 'string' or node_type == 'int':
+            super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for BOOLEAN operation, attempted to use string or integer constant value)"
+                )
+            
+        if node_type == 'bool':
+            return self.get_value(node)
+            
+        # Unary Boolean NOT
+        if node_type == '!':
+            return not (self.run_bool_operation( node.dict['op1'], func_vars))
+        
+        # Boolean OR
+        if node_type == '||':
+            op1 = node.dict['op1']
+            op2 = node.dict['op2']
+            return ( self.run_bool_operation(op1, func_vars) or self.run_bool_operation(op2, func_vars) )
+        
+        # Boolean AND
+        if node_type == '&&':
+            op1 = node.dict['op1']
+            op2 = node.dict['op2']
+            return ( self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars) )
+
+
+        # else:
+        #     print(" ** IN PROGRESS - working on other boolean operations ** ")
+        #     print("\tThis was the node passed in: ", node)
+
+
 
     # Return value of value nodes
     def get_value(self, node):
@@ -405,6 +472,9 @@ class Interpreter(InterpreterBase):
                 string_to_output += str(val)
             elif (node_type in self.INT_OPERATIONS):
                 string_to_output += str (self.run_int_operation(element, func_vars))
+            
+            elif (node_type in self.BOOL_OPERATIONS):
+                string_to_output += str (self.run_bool_operation(element, func_vars))
 
             # TODO: print FCALL
 
