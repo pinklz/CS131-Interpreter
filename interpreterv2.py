@@ -282,6 +282,8 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
 
+        # print("-- Running operation: ", node)
+
         node_type = node.elem_type
 
          # BASE: if operand is a VARIABLE --> return that variable's value
