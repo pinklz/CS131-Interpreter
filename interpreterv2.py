@@ -194,6 +194,8 @@ class Interpreter(InterpreterBase):
                 self.run_fcall(statement_node, func_vars)
             case 'return':
                 return_expression = statement_node.dict['expression']
+                if return_expression == None or return_expression.elem_type == "nil":
+                    return Element("nil")
                 return_exp_type = return_expression.elem_type
 
                 # If returning a CONSTANT value
@@ -338,6 +340,8 @@ class Interpreter(InterpreterBase):
     def get_value(self, node):
         return node.dict['val']         # Maybe TODO: if this is None, add a check or throw an error instead of returning
     
+
+    # TODO: This is probably where most of the shadowing logic will need to happen
     def get_variable_value(self, node, defined_vars):
         var_name = node.dict['name']
         if var_name not in defined_vars:
@@ -378,7 +382,14 @@ class Interpreter(InterpreterBase):
             # # If variable, retrieve variable value
             elif node_type == 'var':
                 # will raise error if variable hasn't been defined
-                string_to_output += str( self.get_variable_value(element, func_vars) )
+                val = self.get_variable_value(element, func_vars)
+                # Separate handling to print true / false in all lower case
+                if val == True:
+                    string_to_output += "true"
+                elif val == False:
+                    string_to_output += "false"
+                else:
+                    string_to_output += str( val )
 
             # TODO: print FCALL
 
