@@ -5,6 +5,8 @@ from element import Element
 class Interpreter(InterpreterBase):
     program_vars = {}
     defined_functions = {}      # should map function name to list of func nodes (for overloading)
+
+    INT_OPERATIONS = ['+', '-', '*', '/', 'neg', 'var']
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -207,7 +209,7 @@ class Interpreter(InterpreterBase):
                     return self.get_variable_value(return_expression, func_vars)
                 
                 # If returning an OPERATION
-                if (return_exp_type in ['+', 'neg', '-', '*', '/']):
+                if (return_exp_type in self.INT_OPERATIONS):
                     return self.run_operation( return_expression, func_vars )
                 else:
                     print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
@@ -258,7 +260,7 @@ class Interpreter(InterpreterBase):
                 print("\t\tUpdated func_vars: ", func_vars)
         
         # Operation to be computed
-        elif (node_type in ['var', 'neg', '+', '-', '*', '/']):
+        elif (node_type in self.INT_OPERATIONS):
             func_vars[var_name] = self.run_operation(node_expression, func_vars)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
@@ -266,6 +268,12 @@ class Interpreter(InterpreterBase):
         # Function call
         elif (node_type == 'fcall'):
             func_vars[var_name] = self.run_fcall(node_expression, func_vars)
+            if (self.trace_output == True):
+                print("\t\tUpdated func_vars: ", func_vars)
+        
+        # Nil value
+        elif (node_type == 'nil'):
+            func_vars[var_name] = Element("nil")
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
         else:
@@ -317,7 +325,7 @@ class Interpreter(InterpreterBase):
                 "Incompatible types for arithmetic operation, attempted to use string"
             )
 
-        # UNARY operation (negation)
+        # UNARY operation (integer negation)
         if node_type == 'neg':
             return -( self.run_operation( node.dict['op1'], func_vars))
 
@@ -380,7 +388,9 @@ class Interpreter(InterpreterBase):
             node_type = element.elem_type
             if node_type == 'string':
                 string_to_output += element.dict['val']
-            elif (node_type in ['int', 'neg', '+', '-', '*', '/']):
+            elif node_type == 'int':
+                string_to_output += str(element.dict['val'])
+            elif (node_type in self.INT_OPERATIONS):
                 string_to_output += str (self.run_operation(element, func_vars))
             
             # # If variable, retrieve variable value
