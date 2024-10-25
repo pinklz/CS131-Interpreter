@@ -207,7 +207,7 @@ class Interpreter(InterpreterBase):
                     return self.get_variable_value(return_expression, func_vars)
                 
                 # If returning an OPERATION
-                if (return_exp_type in ['+', '-', '*', '/']):
+                if (return_exp_type in ['+', 'neg', '-', '*', '/']):
                     return self.run_operation( return_expression, func_vars )
                 else:
                     print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
@@ -258,7 +258,7 @@ class Interpreter(InterpreterBase):
                 print("\t\tUpdated func_vars: ", func_vars)
         
         # Operation to be computed
-        elif (node_type in ['var', '+', '-', '*', '/']):
+        elif (node_type in ['var', 'neg', '+', '-', '*', '/']):
             func_vars[var_name] = self.run_operation(node_expression, func_vars)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
@@ -281,8 +281,6 @@ class Interpreter(InterpreterBase):
     def run_operation(self, node, func_vars):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
-
-        # print("-- Running operation: ", node)
 
         node_type = node.elem_type
 
@@ -318,6 +316,10 @@ class Interpreter(InterpreterBase):
                 ErrorType.TYPE_ERROR,
                 "Incompatible types for arithmetic operation, attempted to use string"
             )
+
+        # UNARY operation (negation)
+        if node_type == 'neg':
+            return -( self.run_operation( node.dict['op1'], func_vars))
 
         # Try operation types, recursively call on operands
         if node_type == '+':
@@ -378,7 +380,7 @@ class Interpreter(InterpreterBase):
             node_type = element.elem_type
             if node_type == 'string':
                 string_to_output += element.dict['val']
-            elif (node_type in ['int', '+', '-', '*', '/']):
+            elif (node_type in ['int', 'neg', '+', '-', '*', '/']):
                 string_to_output += str (self.run_operation(element, func_vars))
             
             # # If variable, retrieve variable value
@@ -386,9 +388,9 @@ class Interpreter(InterpreterBase):
                 # will raise error if variable hasn't been defined
                 val = self.get_variable_value(element, func_vars)
                 # Separate handling to print true / false in all lower case
-                if val == True:
+                if val != 1 and val == True:
                     string_to_output += "true"
-                elif val == False:
+                elif val != 0 and val == False:
                     string_to_output += "false"
                 else:
                     string_to_output += str( val )
