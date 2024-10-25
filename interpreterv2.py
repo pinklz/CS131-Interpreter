@@ -6,7 +6,8 @@ class Interpreter(InterpreterBase):
     program_vars = {}
     defined_functions = {}      # should map function name to list of func nodes (for overloading)
 
-    INT_OPERATIONS = ['+', '-', '*', '/', 'neg', 'var']
+    INT_OPERATIONS = ['+', '-', '*', '/', 'neg']
+    BOOL_OPERATIONS = ['!', '||', '&&']
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -124,7 +125,7 @@ class Interpreter(InterpreterBase):
                 func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
             else:
                 # TODO: if error, likely is in missing a case here
-                func_arg_values.append( self.run_operation (arg, calling_func_vars) )
+                func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
 
 
 
@@ -177,7 +178,7 @@ class Interpreter(InterpreterBase):
 
     ''' ---- RUN STATEMENT ---- '''
     def run_statement(self, statement_node, func_vars):
-        # TODO: add cases for 'if', 'for', 'return'
+        # TODO: add cases for 'if', 'for'
         node_type = statement_node.elem_type
 
         # Run node's respective function
@@ -210,9 +211,15 @@ class Interpreter(InterpreterBase):
                 
                 # If returning an OPERATION
                 if (return_exp_type in self.INT_OPERATIONS):
-                    return self.run_operation( return_expression, func_vars )
+                    return self.run_int_operation( return_expression, func_vars )
+                
+                # If returning an op that results in a boolean
+                if (return_exp_type in self.BOOL_OPERATIONS):
+                    return self.run_bool_operation( return_expression, func_vars )
+                
+                
                 else:
-                    print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
+                    print("THIS IS WHERE I LEFT OFF< NOT DONE YET - in RUN_STATEMENT at return line")
 
             case _:
                 super().error(
@@ -258,10 +265,22 @@ class Interpreter(InterpreterBase):
             func_vars[var_name] = self.get_value(node_expression)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
+
+        # TODO - check here. I removed 'var' from being included in the following elif
+        elif (node_type == 'var'):
+            func_vars[var_name] = self.get_variable_value(node, func_vars)
+            if (self.trace_output == True):
+                print("\t\tUpdated func_vars: ", func_vars)
         
-        # Operation to be computed
+        # Operation to be computed on integer
         elif (node_type in self.INT_OPERATIONS):
-            func_vars[var_name] = self.run_operation(node_expression, func_vars)
+            func_vars[var_name] = self.run_int_operation(node_expression, func_vars)
+            if (self.trace_output == True):
+                print("\t\tUpdated func_vars: ", func_vars)
+
+        # Operation to be computed on boolean
+        elif (node_type in self.BOOL_OPERATIONS):
+            func_vars[var_name] = self.run_bool_operation(node_expression, func_vars)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
 
@@ -276,6 +295,7 @@ class Interpreter(InterpreterBase):
             func_vars[var_name] = Element("nil")
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
+        
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
@@ -286,7 +306,7 @@ class Interpreter(InterpreterBase):
     ''' ---- Evaluating Expressions / Operations ---- '''
         # Should return value of operation
         # If nested, call run_op on the nested one --> should return value of nested operation to be used in top level op
-    def run_operation(self, node, func_vars):
+    def run_int_operation(self, node, func_vars):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
 
@@ -322,31 +342,70 @@ class Interpreter(InterpreterBase):
         if node_type == 'string':
             super().error(
                 ErrorType.TYPE_ERROR,
-                "Incompatible types for arithmetic operation, attempted to use string"
+                "Incompatible types for arithmetic operation, attempted to use string constant"
+            )
+        # If try to operate on a bool --> error
+        if node_type == 'bool':
+            super().error(
+                ErrorType.TYPE_ERROR,
+                "Incompatible types for arithmetic operation, attempted to use boolean constant"
             )
 
         # UNARY operation (integer negation)
         if node_type == 'neg':
-            return -( self.run_operation( node.dict['op1'], func_vars))
+            return -( self.run_int_operation( node.dict['op1'], func_vars))
 
         # Try operation types, recursively call on operands
         if node_type == '+':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1, func_vars) + self.run_operation(op2, func_vars)
+            return self.run_int_operation(op1, func_vars) + self.run_int_operation(op2, func_vars)
         if node_type == '-':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1, func_vars) - self.run_operation(op2, func_vars) 
+            return self.run_int_operation(op1, func_vars) - self.run_int_operation(op2, func_vars) 
         if node_type == '*':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1, func_vars) * self.run_operation(op2, func_vars)   
+            return self.run_int_operation(op1, func_vars) * self.run_int_operation(op2, func_vars)   
         if node_type == '/':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return self.run_operation(op1, func_vars) // self.run_operation(op2, func_vars)
+            return self.run_int_operation(op1, func_vars) // self.run_int_operation(op2, func_vars)
 
+
+    ''' ---- Evaluate BOOLEAN operation ---- '''
+    def run_bool_operation(self, node, func_vars):
+        node_type = node.elem_type
+
+        # BASE: constant bool val       (and handle for string / int passed in)
+        if node_type == 'bool':
+            return self.get_value(node)
+        if node_type == 'string':
+            super().error(
+                ErrorType.TYPE_ERROR,
+                "Incompatible types for BOOLEAN operation, attempted to use STRING"
+            )
+        if node_type == 'int':
+            super().error(
+                ErrorType.TYPE_ERROR,
+                "Incompatible types for BOOLEAN operation, attempted to use INT"
+            )
+
+        # BASE: operand is a VARIABLE --> get variable value
+        if node_type == 'var':
+            # Checks variable is defined
+            self.get_variable_value(node, func_vars)
+            if (isinstance( func_vars[ node.dict['name'] ], str)):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for BOOLEAN operation, attempted to use STRING (via existing variable {node.dict['name']} value)"
+                )
+            return func_vars[ node.dict['name'] ]
+        
+        # Negation operation (!)
+        if node_type == '!':
+            return not ( self.run_bool_operation (node.dict['op1'], func_vars) )
 
     # Return value of value nodes
     def get_value(self, node):
@@ -391,7 +450,7 @@ class Interpreter(InterpreterBase):
             elif node_type == 'int':
                 string_to_output += str(element.dict['val'])
             elif (node_type in self.INT_OPERATIONS):
-                string_to_output += str (self.run_operation(element, func_vars))
+                string_to_output += str (self.run_int_operation(element, func_vars))
             
             # # If variable, retrieve variable value
             elif node_type == 'var':
