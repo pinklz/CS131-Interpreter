@@ -2,6 +2,8 @@ from brewparse import parse_program
 from intbase import *
 from element import Element
 
+## Checkpoint note - before any variable scoping
+
 class Interpreter(InterpreterBase):
     program_vars = {}
     defined_functions = {}      # should map function name to list of func nodes (for overloading)
