@@ -10,6 +10,7 @@ class Interpreter(InterpreterBase):
     BOOL_OPERATIONS = ['!', '||', '&&']
     EQUALITY_COMPARISONS = ['==', '!=']
     INTEGER_COMPARISONS = ['<', '<=', '>', '>=']
+    OVERLOADED_OPERATIONS = ['+']
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -126,6 +127,9 @@ class Interpreter(InterpreterBase):
                 func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
             
             # Passed in EXPRESION
+                # Overloaded operation
+            elif arg.elem_type in self.OVERLOADED_OPERATIONS:
+                func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
                 # Integer operation
             elif arg.elem_type in self.INT_OPERATIONS:
                 func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
@@ -223,6 +227,10 @@ class Interpreter(InterpreterBase):
                 if (return_exp_type == 'var'):
                     return self.get_variable_value(return_expression, func_vars)
                 
+                # If using an OVERLOADED OPERATOR 
+                if (return_exp_type in self.OVERLOADED_OPERATIONS):
+                    return self.overloaded_operator(return_expression, func_vars)
+                
                 # If returning an OPERATION
                 if (return_exp_type in self.INT_OPERATIONS):
                     return self.run_int_operation( return_expression, func_vars )
@@ -288,6 +296,12 @@ class Interpreter(InterpreterBase):
             func_vars[var_name] = self.get_value(node_expression)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
+
+        # Using an OVERLOADED operator
+        elif (node_type in self.OVERLOADED_OPERATIONS):
+            func_vars[var_name] = self.overloaded_operator(node_expression, func_vars)
+            if (self.trace_output == True):
+                print("\t\tUpdated func_vars: ", func_vars)
         
         # Integer Operation to be computed
         elif (node_type in self.INT_OPERATIONS):
@@ -331,12 +345,40 @@ class Interpreter(InterpreterBase):
                 ) 
         
 
+    ''' ---- Overloaded Operation ---- '''
+    def overloaded_operator(self, node, func_vars):
+        if (self.trace_output):
+            print("IN OVERLOADED OPERATOR function")
+
+        node_type = node.elem_type
+        op1 = node.dict['op1']
+        op2 = node.dict['op2']
+
+        # Get operator values 
+        op1_value = self.eval_op(op1, func_vars)
+        op2_value = self.eval_op(op2, func_vars)
+
+        # Check that operands are of the same type
+        if ( type(op1_value) != type(op2_value)):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use {node_type} on different types { type(op1_value)} and { type(op2_value)}"
+            )
+
+        if node_type == '+':
+            # '+' is defined for INT and STRING
+            if type(op1_value) == int:
+                return self.run_int_operation(node, func_vars)
+            if type(op1_value) == str:
+                return self.run_string_operation(node, func_vars)
+    
+    
     ''' ---- Evaluating Expressions / Operations ---- '''
         # Should return value of operation
         # If nested, call run_op on the nested one --> should return value of nested operation to be used in top level op
     def run_int_operation(self, node, func_vars):
         if (self.trace_output == True):
-            print("OPERATION: ", node.elem_type)
+            print("INT OPERATION: ", node.elem_type)
 
         node_type = node.elem_type
 
@@ -396,6 +438,52 @@ class Interpreter(InterpreterBase):
             op2 = node.dict['op2']
             return self.run_int_operation(op1, func_vars) // self.run_int_operation(op2, func_vars)
 
+    def run_string_operation(self, node, func_vars):
+        if (self.trace_output == True):
+            print("STRING OPERATION: ", node.elem_type)
+
+        node_type = node.elem_type
+
+         # BASE: if operand is a VARIABLE --> return that variable's value
+        if node_type == 'var':
+            self.get_variable_value(node, func_vars)
+
+            # Check if INT or BOOL
+            if (isinstance( func_vars[node.dict['name']], int)):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for STRING operation, attempted to use INTEGER (via existing variable {node.dict['name']} value)"
+                )
+
+            if ( func_vars[ node.dict['name']] is True or func_vars[ node.dict['name']] is False):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for STRING operation, attempted to use BOOLEAN (via existing variable {node.dict['name']} value)"
+                )
+            # Otherwise, return value
+            return func_vars[ node.dict['name'] ]
+        
+        if node_type == 'bool' or node_type == 'int':
+            super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for STRING operation, attempted to use boolean or integer constant value)"
+                )
+            
+        if node_type == 'string':
+            return self.get_value(node)
+        
+        # Function call
+        if node_type == 'fcall':
+            if (self.trace_output == True):
+                print("EXPRESSION USES A FUNCTION CALL")
+            return self.run_fcall(node, func_vars)
+
+        # String concatenation
+        if node_type == '+':
+            op1 = node.dict['op1']
+            op2 = node.dict['op2']
+            return ( self.run_string_operation(op1, func_vars) + self.run_string_operation(op2, func_vars) )
+
 
     ''' ---- Calculate BOOLEAN OPERATION ---- '''
     def run_bool_operation(self, node, func_vars):
@@ -430,6 +518,12 @@ class Interpreter(InterpreterBase):
             
         if node_type == 'bool':
             return self.get_value(node)
+        
+        # Function call
+        if node_type == 'fcall':
+            if (self.trace_output == True):
+                print("EXPRESSION USES A FUNCTION CALL")
+            return self.run_fcall(node, func_vars)
             
         # Unary Boolean NOT
         if node_type == '!':
@@ -469,6 +563,9 @@ class Interpreter(InterpreterBase):
             
             if op_type == 'nil':
                 return Element("nil")
+            
+            if op_type in self.OVERLOADED_OPERATIONS:
+                return self.overloaded_operator(node, func_vars)
             
             if op_type in self.INT_OPERATIONS:
                 return self.run_int_operation(node, func_vars)
@@ -614,6 +711,10 @@ class Interpreter(InterpreterBase):
                     string_to_output += "false"
                 else:
                     string_to_output += str (val)
+
+            elif (node_type in self.OVERLOADED_OPERATIONS):
+                # If BOOLS in overloaded operatos --> need to add the True False check
+                string_to_output += str (self.overloaded_operator(element, func_vars))
 
             elif (node_type in self.INT_OPERATIONS):
                 string_to_output += str (self.run_int_operation(element, func_vars))
