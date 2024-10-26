@@ -213,6 +213,10 @@ class Interpreter(InterpreterBase):
                 if (self.trace_output == True):
                     print("\nRUN_STATEMENT: This node is a function call")
                 self.run_fcall(statement_node, func_vars)
+            case 'if':
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is an IF statement")
+                self.evaluate_if(statement_node, func_vars)
             case 'return':
                 return_expression = statement_node.dict['expression']
                 if return_expression == None or return_expression.elem_type == "nil":
@@ -344,6 +348,72 @@ class Interpreter(InterpreterBase):
                     f"Unrecognized expression \"{node_expression.elem_type}\" in variable assignment for {var_name}"
                 ) 
         
+    ''' ---- If Statement ---- '''
+    def check_if_condition(self, condition, func_vars):
+        # If constant or variable
+        if (condition.elem_type == 'bool'):
+            eval_statements =  self.get_value(condition)
+        elif (condition.elem_type == 'int' or condition.elem_type == 'string'):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Cannot evaluate STRING or INT in 'if' statement condition"
+            )
+        
+        # If variable value
+        elif (condition.elem_type == 'var'):
+            # Check variable is defined
+            self.get_variable_value(condition, func_vars)
+
+            val = func_vars[ condition.dict['name'] ]
+            if (val is True) or (val is False):
+                eval_statements = func_vars[ condition.dict['name'] ]
+            else:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot evaluate STRING or INT (or nil?) in 'if' statement condition, attempted (via existing variable {condition.dict['name']} value)"
+                )
+
+        # If fcall
+        elif (condition.elem_type == 'fcall'):
+            fcall_return = self.run_fcall(condition, func_vars)
+            if fcall_return is True or fcall_return is False:
+                eval_statements = fcall_return
+            else:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot evaluate STRING or INT (or nil?) in 'if' statement condition, attempted via fcall to {condition.dict['name']}"
+                )
+
+        elif (condition.elem_type in self.EQUALITY_COMPARISONS):
+            eval_statements = self.check_equality(condition, func_vars)
+        elif (condition.elem_type in self.INTEGER_COMPARISONS):
+            eval_statements = self.integer_compare(condition, func_vars)
+        elif (condition.elem_type in self.BOOL_OPERATIONS):
+            eval_statements = self.run_bool_operation(condition, func_vars)
+        
+        # CHECK : IF none of these, is likely an integer expression
+        else:
+            super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Unrecognized expression type { {condition.elem_type} } for 'if' condition: { {condition} }"
+                )
+
+        return eval_statements
+
+    def evaluate_if(self, node, func_vars):
+        if self.trace_output:
+            print("** Inside EVALUATE_IF\tNode: ", node)
+
+        print("** Inside EVALUATE_IF\tNode: ", node)
+        condition = node.dict['condition']
+        eval_statements = False
+        statements = node.dict['statements']
+        else_statements = node.dict['else_statements']
+
+        eval_condition = self.check_if_condition(condition, func_vars)
+
+        
+
 
     ''' ---- Overloaded Operation ---- '''
     def overloaded_operator(self, node, func_vars):
