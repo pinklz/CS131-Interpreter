@@ -321,7 +321,8 @@ class Interpreter(InterpreterBase):
 
         scope_to_update = None
 
-        for scope in scope_stack:
+        # Traverse stack in reverse order
+        for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the one you want to update
             # ONLY EDIT TOPMOST SCOPE
             if var_name in scope:
@@ -442,32 +443,43 @@ class Interpreter(InterpreterBase):
 
         return eval_statements
 
-    def evaluate_if(self, node, func_vars):
+    def evaluate_if(self, node, scope_stack):
         if self.trace_output:
             print("** Inside EVALUATE_IF\tNode: ", node)
+
+        # print("\n-- Inside EVALUATE_IF\tnode: ", node)
+        # print("\tPassed in scope stack: ", scope_stack)
+
+        new_scope = {}
+        scope_stack.append( new_scope )
 
         condition = node.dict['condition']
         statements = node.dict['statements']
         else_statements = node.dict['else_statements']
 
-        eval_condition = self.check_condition(condition, func_vars)
+        eval_condition = self.check_condition(condition, scope_stack)
 
         if (eval_condition):
             # Loop through function statements in order
             for statement_node in statements:
                 if (statement_node.elem_type == 'return'):
-                    return self.run_statement (statement_node, func_vars)
+                    return self.run_statement (statement_node, scope_stack)
                 
                 # Otherwise, just execute the statement
-                self.run_statement( statement_node , func_vars)
+                self.run_statement( statement_node , scope_stack)
         else:
             if else_statements != None:
                 for statement_node in else_statements:
                     if (statement_node.elem_type == 'return'):
-                        return self.run_statement (statement_node, func_vars)
+                        return self.run_statement (statement_node, scope_stack)
                     
                     # Otherwise, just execute the statement
-                    self.run_statement( statement_node , func_vars)
+                    self.run_statement( statement_node , scope_stack)
+
+        # Pop off new scope's variables
+        # TODO: also need to pop off if return early
+            # yup pop off
+        scope_stack.pop()
         
     ''' --- For Loop ---- '''
     def run_for_loop(self, node, func_vars):
@@ -812,7 +824,8 @@ class Interpreter(InterpreterBase):
     def get_variable_value(self, node, scope_stack):
         
         var_name = node.dict['name']
-        for scope in scope_stack:
+        # Traverse stack in reverse order
+        for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the value you want to return
             if var_name in scope:
                 return scope[var_name]
