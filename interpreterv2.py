@@ -132,6 +132,9 @@ class Interpreter(InterpreterBase):
                 # Boolean operation
             elif arg.elem_type in self.BOOL_OPERATIONS:
                 func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
+                # Equality comparison
+            elif arg.elem_type in self.EQUALITY_COMPARISONS:
+                func_arg_values.append( self.check_equality (arg, calling_func_vars) )
             else:
                 print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
                 # TODO: if error, likely is in missing a case here
@@ -499,8 +502,7 @@ class Interpreter(InterpreterBase):
         else:
             same = (op1_value == op2_value)
 
-        
-
+        # Actually perform equality check
         if node_type == '==':
             return same
         elif node_type == '!=':
@@ -589,7 +591,8 @@ class Interpreter(InterpreterBase):
                 if result is False:
                     string_to_output += "false"
 
-            # TODO: print FCALL
+            elif node_type == 'fcall':
+                string_to_output += str(self.run_fcall(element, func_vars))
 
         super().output(string_to_output)
         return Element("nil")
