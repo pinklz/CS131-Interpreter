@@ -85,6 +85,16 @@ class Interpreter(InterpreterBase):
                 )
             return self.inputi(node_dict['args'])
         
+        if func_name == 'inputs':
+            if (self.trace_output == True):
+                print("\tCalling inputs function")
+            if (len (node_dict['args']) > 1):
+                super().error(
+                    ErrorType.NAME_ERROR,
+                    f"No inputs() function found that takes more than 1 parameter"
+                )
+            return self.inputs(node_dict['args'])
+        
         if func_name == 'print':
             return self.printout(calling_func_vars, node_dict['args'])
         ''' END OF SEPARATE HANDLING '''
@@ -798,6 +808,17 @@ class Interpreter(InterpreterBase):
 
         return int(user_input)
         # CHECK - may need to check in future versions before converting to integer
+
+    ''' ---- INPUTIS function ---- '''
+    def inputs(self, prompt=[]):
+        if (prompt == []):
+            user_input = super().get_input()
+        else:
+            prompt_string = prompt[0].dict['val']
+            super().output(prompt_string)
+            user_input = super().get_input()
+
+        return str(user_input)
 
     ''' ---- PRINT function ---- '''
     def printout(self, func_vars, lst=[]):
