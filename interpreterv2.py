@@ -217,6 +217,10 @@ class Interpreter(InterpreterBase):
                 if (self.trace_output == True):
                     print("\nRUN_STATEMENT: This node is an IF statement")
                 self.evaluate_if(statement_node, func_vars)
+            case 'for':
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is an FOR loop")
+                self.run_for_loop(statement_node, func_vars)
             case 'return':
                 return_expression = statement_node.dict['expression']
                 if return_expression == None or return_expression.elem_type == "nil":
@@ -349,7 +353,7 @@ class Interpreter(InterpreterBase):
                 ) 
         
     ''' ---- If Statement ---- '''
-    def check_if_condition(self, condition, func_vars):
+    def check_condition(self, condition, func_vars):
         # If constant or variable
         if (condition.elem_type == 'bool'):
             eval_statements =  self.get_value(condition)
@@ -408,7 +412,7 @@ class Interpreter(InterpreterBase):
         statements = node.dict['statements']
         else_statements = node.dict['else_statements']
 
-        eval_condition = self.check_if_condition(condition, func_vars)
+        eval_condition = self.check_condition(condition, func_vars)
 
         if (eval_condition):
             # Loop through function statements in order
@@ -427,6 +431,37 @@ class Interpreter(InterpreterBase):
                     # Otherwise, just execute the statement
                     self.run_statement( statement_node , func_vars)
         
+    ''' --- For Loop ---- '''
+    def run_for_loop(self, node, func_vars):
+        if self.trace_output:
+            print("** Inside RUN FOR LOOP\tNode: ", node)
+
+        initialize = node.dict['init']
+        condition = node.dict['condition']
+        update = node.dict['update']
+        statements = node.dict['statements']
+
+        # Initialize counter variable in variable dictionary
+        self.run_assign(initialize, func_vars)
+
+        # Check condition is true to begin with
+        eval_condition = self.check_condition(condition, func_vars)
+
+        # While condition is true, execute statements
+        while (eval_condition):
+            # Loop through function statements in order
+            for statement_node in statements:
+                if (statement_node.elem_type == 'return'):
+                    return self.run_statement (statement_node, func_vars)
+                
+                # Otherwise, just execute the statement
+                self.run_statement( statement_node , func_vars)
+
+            # Update counter variable value
+            self.run_assign(update, func_vars)
+
+            # Check condition again
+            eval_condition = self.check_condition(condition, func_vars)
 
 
     ''' ---- Overloaded Operation ---- '''
