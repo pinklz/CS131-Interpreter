@@ -8,6 +8,8 @@ class Interpreter(InterpreterBase):
 
     INT_OPERATIONS = ['+', '-', '*', '/', 'neg']
     BOOL_OPERATIONS = ['!', '||', '&&']
+    EQUALITY_COMPARISONS = ['==', '!=']
+    INTEGER_COMPARISONS = ['<', '<=', '>', '>=']
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -131,7 +133,7 @@ class Interpreter(InterpreterBase):
             elif arg.elem_type in self.BOOL_OPERATIONS:
                 func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
             else:
-                print("***********************\n\t IN RUN_FCALL, don't know how to process arguments")
+                print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
                 # TODO: if error, likely is in missing a case here
 
 
@@ -223,8 +225,13 @@ class Interpreter(InterpreterBase):
                 if (return_exp_type in self.BOOL_OPERATIONS):
                     return self.run_bool_operation( return_expression, func_vars )
                 
-                # else:
-                #     print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
+                # If returning result of EQUALITY comparison operation
+                if (return_exp_type in self.EQUALITY_COMPARISONS):
+                    return self.check_equality( return_expression, func_vars )
+                
+
+                else:
+                    print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
 
             case _:
                 super().error(
@@ -248,7 +255,7 @@ class Interpreter(InterpreterBase):
             )
 
         # Add new variable to func_vars           Initial value: None
-        func_vars[var_name] = None
+        func_vars[var_name] = "DIS IS THE INITIAL VARIABLE VALUE"
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", func_vars)
 
@@ -281,6 +288,11 @@ class Interpreter(InterpreterBase):
         # Boolean Operation to be computed
         elif (node_type in self.BOOL_OPERATIONS):
             func_vars[var_name] = self.run_bool_operation(node_expression, func_vars)
+            if (self.trace_output == True):
+                print("\t\tUpdated func_vars: ", func_vars)
+
+        elif (node_type in self.EQUALITY_COMPARISONS):
+            func_vars[var_name] = self.check_equality(node_expression, func_vars)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
 
@@ -419,11 +431,91 @@ class Interpreter(InterpreterBase):
             return ( self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars) )
 
 
+        else:
+            print(" ** IN PROGRESS - working on other boolean operations ** ")
+            print("\tThis was the node passed in: ", node)
+
+    ''' ---- Comparison Operations ---- '''
+    def eval_op(self, node, func_vars):
+            op_type = node.elem_type
+
+            # Get variable value
+            if op_type == 'var':
+                return self.get_variable_value(node, func_vars)
+
+            # If value type
+            if op_type == 'int' or op_type == 'string' or op_type == 'bool':
+                return self.get_value(node)
+            
+            if op_type == 'fcall':
+                return self.run_fcall(node, func_vars)
+            
+            if op_type == 'nil':
+                return Element("nil")
+            
+            if op_type in self.INT_OPERATIONS:
+                return self.run_int_operation(node, func_vars)
+            
+            if op_type in self.BOOL_OPERATIONS:
+                return self.run_bool_operation(node, func_vars)
+            
+            if op_type in self.EQUALITY_COMPARISONS:
+                return self.check_equality(node, func_vars)
+            
+            print(" LEFT OFF HERE - to get op value of ", node)
+
+    def check_equality(self, node, func_vars):
+        
+        if (self.trace_output == True):
+            print("CHECKING EQUALITY: ", node.elem_type)
+
+        node_type = node.elem_type
+        op1 = node.dict['op1']
+        op2 = node.dict['op2']
+
+        # Get operator values 
+        op1_value = self.eval_op(op1, func_vars)
+        op2_value = self.eval_op(op2, func_vars)
+
+        same = None
+
+        # SPECIAL case: 'nil' values
+        if (op1_value == 'nil') and (op2_value == 'nil'):
+            same = True
+        elif (op1_value == 'nil') or (op2_value == 'nil'):
+            same = False
+
+        # If both are bool
+        elif ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
+            same = True
+        elif ( (op1_value is True) and (op2_value is False)) or ((op1_value is False) and (op2_value is True)):
+            same = False
+        
+        # If different types
+        if ( type(op1_value) != type(op2_value) ):
+            if (self.trace_output == True):
+                print("\t False -- different types for ", op1_value, " and ", op2_value)
+            same = False
+        else:
+            same = (op1_value == op2_value)
+
+        
+
+        if node_type == '==':
+            return same
+        elif node_type == '!=':
+            return not same
+        else:
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Unrecognized equality operation of type {node_type}"
+            )
+
 
 
     # Return value of value nodes
     def get_value(self, node):
-        return node.dict['val']         # Maybe TODO: if this is None, add a check or throw an error instead of returning
+        return node.dict['val']
     
 
     # TODO: This is probably where most of the shadowing logic will need to happen
@@ -489,7 +581,13 @@ class Interpreter(InterpreterBase):
                     string_to_output += "true"
                 if result is False:
                     string_to_output += "false"
-                # string_to_output += str (self.run_bool_operation(element, func_vars))
+
+            elif (node_type in self.EQUALITY_COMPARISONS):
+                result = self.check_equality(element, func_vars)
+                if result is True:
+                    string_to_output += "true"
+                if result is False:
+                    string_to_output += "false"
 
             # TODO: print FCALL
 
