@@ -135,6 +135,9 @@ class Interpreter(InterpreterBase):
                 # Equality comparison
             elif arg.elem_type in self.EQUALITY_COMPARISONS:
                 func_arg_values.append( self.check_equality (arg, calling_func_vars) )
+                # Integer comparison
+            elif arg.elem_type in self.INTEGER_COMPARISONS:
+                func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
             else:
                 print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
                 # TODO: if error, likely is in missing a case here
@@ -232,6 +235,10 @@ class Interpreter(InterpreterBase):
                 if (return_exp_type in self.EQUALITY_COMPARISONS):
                     return self.check_equality( return_expression, func_vars )
                 
+                # If returning result of INTEGER COMPARISON
+                if (return_exp_type in self.INTEGER_COMPARISONS):
+                    return self.integer_compare( return_expression, func_vars )
+                
 
                 else:
                     print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
@@ -294,8 +301,15 @@ class Interpreter(InterpreterBase):
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
 
+        # Equality comparison
         elif (node_type in self.EQUALITY_COMPARISONS):
             func_vars[var_name] = self.check_equality(node_expression, func_vars)
+            if (self.trace_output == True):
+                print("\t\tUpdated func_vars: ", func_vars)
+
+        # Integer value comparison
+        elif (node_type in self.INTEGER_COMPARISONS):
+            func_vars[var_name] = self.integer_compare(node_expression, func_vars)
             if (self.trace_output == True):
                 print("\t\tUpdated func_vars: ", func_vars)
 
@@ -513,6 +527,33 @@ class Interpreter(InterpreterBase):
                 f"Unrecognized equality operation of type {node_type}"
             )
 
+    def integer_compare(self, node, func_vars):
+        if (self.trace_output == True):
+            print("CHECKING EQUALITY: ", node.elem_type)
+
+        node_type = node.elem_type
+        op1 = node.dict['op1']
+        op2 = node.dict['op2']
+
+        # Get operator values 
+        op1_value = self.eval_op(op1, func_vars)
+        op2_value = self.eval_op(op2, func_vars)
+
+        # If not integers --> type error
+        if ( type(op1_value) != int) or (type(op2_value) != int):
+            super().error(
+                ErrorType.TYPE_ERROR, 
+                f"Can't use operation {node_type} on non-integer values {op1_value} and {op2_value}"
+            )
+
+        if node_type == '<':
+            return op1_value < op2_value
+        if node_type == '<=':
+            return op1_value <= op2_value
+        if node_type == '>=':
+            return op1_value >= op2_value
+        if node_type == '>':
+            return op1_value > op2_value
 
 
     # Return value of value nodes
@@ -586,6 +627,13 @@ class Interpreter(InterpreterBase):
 
             elif (node_type in self.EQUALITY_COMPARISONS):
                 result = self.check_equality(element, func_vars)
+                if result is True:
+                    string_to_output += "true"
+                if result is False:
+                    string_to_output += "false"
+
+            elif (node_type in self.INTEGER_COMPARISONS):
+                result = self.integer_compare(element, func_vars)
                 if result is True:
                     string_to_output += "true"
                 if result is False:
