@@ -375,11 +375,11 @@ class Interpreter(InterpreterBase):
         # If variable value
         elif (condition.elem_type == 'var'):
             # Check variable is defined
-            self.get_variable_value(condition, func_vars)
+            val = self.get_variable_value(condition, func_vars)
 
-            val = func_vars[ condition.dict['name'] ]
+            # val = func_vars[ condition.dict['name'] ]
             if (val is True) or (val is False):
-                eval_statements = func_vars[ condition.dict['name'] ]
+                eval_statements = val
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -512,9 +512,9 @@ class Interpreter(InterpreterBase):
 
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
-            self.get_variable_value(node, func_vars)
+            val = self.get_variable_value(node, func_vars)
             # Check that variable type isn't a string
-            val = func_vars[ node.dict['name'] ]
+            # val = func_vars[ node.dict['name'] ]
             if (isinstance( val,  str)):
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -574,22 +574,22 @@ class Interpreter(InterpreterBase):
 
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
-            self.get_variable_value(node, func_vars)
+            val = self.get_variable_value(node, func_vars)
 
             # Check if INT or BOOL
-            if (isinstance( func_vars[node.dict['name']], int)):
+            if (isinstance( val , int)):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for STRING operation, attempted to use INTEGER (via existing variable {node.dict['name']} value)"
                 )
 
-            if ( func_vars[ node.dict['name']] is True or func_vars[ node.dict['name']] is False):
+            if ( val is True or val is False):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for STRING operation, attempted to use BOOLEAN (via existing variable {node.dict['name']} value)"
                 )
             # Otherwise, return value
-            return func_vars[ node.dict['name'] ]
+            return val
         
         if node_type == 'bool' or node_type == 'int':
             super().error(
@@ -622,21 +622,21 @@ class Interpreter(InterpreterBase):
 
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
-            self.get_variable_value(node, func_vars)
+            val = self.get_variable_value(node, func_vars)
 
-            if (isinstance( func_vars[ node.dict['name'] ], str)):
+            if (isinstance( val, str)):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for BOOLEAN operation, attempted to use string (via existing variable {node.dict['name']} value)"
                 )
 
             # CHECK: this should check for integers, and even exlude 0 and 1
-            if ( func_vars[ node.dict['name']] is not True) and ( func_vars[ node.dict['name']] is not False):
+            if ( val is not True) and ( val is not False):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for BOOLEAN operation, attempted to use string (via existing variable {node.dict['name']} value)"
                 )
-            return func_vars[ node.dict['name'] ]
+            return val
         
         if node_type == 'string' or node_type == 'int':
             super().error(
