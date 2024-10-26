@@ -170,6 +170,7 @@ class Interpreter(InterpreterBase):
             )
 
         # Create dictionary to hold variables local to this function
+        scope_stack = []
         func_vars = {}
         
         node_dict = func_node.dict
@@ -190,15 +191,18 @@ class Interpreter(InterpreterBase):
             for (var_name, var_value) in zip(node_params, func_args):
                 func_vars[var_name.dict['name']] = var_value
 
+        # Base parameter:argument pairs are the ENCLOSING environment defined variables
+        scope_stack.append( func_vars )
 
+        # print("-- IN RUN_FUNC\tScope Stack: ", scope_stack)
 
         # Loop through function statements in order
         for statement_node in node_dict['statements']:
             if (statement_node.elem_type == 'return'):
-                return self.run_statement (statement_node, func_vars)
+                return self.run_statement (statement_node, scope_stack)
             
             # Otherwise, just execute the statement
-            self.run_statement( statement_node , func_vars)
+            self.run_statement( statement_node , scope_stack)
 
         # If exit list of statements without reaching a return statement, return NIL
         return Element("nil")
@@ -277,89 +281,115 @@ class Interpreter(InterpreterBase):
 
     ''' ---- Running Statement Types ---- '''
     # VARDEF
-    def run_vardef(self, node, func_vars):
+    def run_vardef(self, node, scope_stack):
         if (self.trace_output == True):
             print("\tInside RUN_VARDEF")
         var_name = node.dict['name']
+        # print("\n-- Inside RUN_VARDEF\tnode: ", node)
+        # print("\tPassed in scope_stack: ", scope_stack)
 
-        # Check if variable has already been defined
-        if var_name in func_vars:
+        # Retrieves top-most scope (within inner-most block)
+        latest_scope = scope_stack[-1]
+
+        # Check if variable has already been defined in this scope
+        if var_name in latest_scope:
             super().error(
                 ErrorType.NAME_ERROR,
                 f"Variable {var_name} defined more than once"
             )
 
         # Add new variable to func_vars           Initial value: None
-        func_vars[var_name] = "DIS IS THE INITIAL VARIABLE VALUE"
+        latest_scope[var_name] = "DIS IS THE INITIAL VARIABLE VALUE"
         if (self.trace_output == True):
-            print("\t\tCurrent func_vars: ", func_vars)
+            print("\t\tCurrent func_vars: ", latest_scope)
+
+        # print("\tNew scope_stack: ", scope_stack)
 
 
     ''' ---- Variable Assignment ---- '''
-    def run_assign(self, node, func_vars):
+    def run_assign(self, node, scope_stack):
         if (self.trace_output == True):
             print("\tInside RUN_ASSIGN")
         node_dict = node.dict
         var_name = node_dict['name']
 
+        # print("\n--Inside VAR_ASSIGN\tNode: ", node)
+        # print("\tPassed in scope stack: ", scope_stack)
+
         # Check that variable has been declared
-        self.get_variable_value(node, func_vars)
+        self.get_variable_value(node, scope_stack)
+
+        scope_to_update = None
+
+        for scope in scope_stack:
+            # If variable exists in this scope, this is the one you want to update
+            # ONLY EDIT TOPMOST SCOPE
+            if var_name in scope:
+                scope_to_update = scope
+                break
+
 
         # Calculate expression
         node_expression = node_dict['expression']
         node_type = node_expression.elem_type
         # If string, int, or boolean value
         if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
-            func_vars[var_name] = self.get_value(node_expression)
+            scope_to_update[var_name] = self.get_value(node_expression)
             if (self.trace_output == True):
-                print("\t\tUpdated func_vars: ", func_vars)
+                print("\t\tUpdated scope_stack: ", scope_stack)
+
+        # # If another variable
+        # if (node_type == 'var'):
+        #     scope_to_update[var_name] = self.get_variable_value(node_expression, scope_stack)
 
         # Using an OVERLOADED operator
         elif (node_type in self.OVERLOADED_OPERATIONS):
-            func_vars[var_name] = self.overloaded_operator(node_expression, func_vars)
+            scope_to_update[var_name] = self.overloaded_operator(node_expression, scope_stack)
             if (self.trace_output == True):
-                print("\t\tUpdated func_vars: ", func_vars)
+                print("\t\tUpdated scope_stack: ", scope_stack)
         
         # Integer Operation to be computed
         elif (node_type in self.INT_OPERATIONS):
-            func_vars[var_name] = self.run_int_operation(node_expression, func_vars)
+            scope_to_update[var_name] = self.run_int_operation(node_expression, scope_stack)
             if (self.trace_output == True):
-                print("\t\tUpdated func_vars: ", func_vars)
+                print("\t\tUpdated scope_stack: ", scope_stack)
 
         # Boolean Operation to be computed
         elif (node_type in self.BOOL_OPERATIONS):
-            func_vars[var_name] = self.run_bool_operation(node_expression, func_vars)
+            scope_to_update[var_name] = self.run_bool_operation(node_expression, scope_stack)
             if (self.trace_output == True):
-                print("\t\tUpdated func_vars: ", func_vars)
+                print("\t\tUpdated scope_stack: ", scope_stack)
 
         # Equality comparison
         elif (node_type in self.EQUALITY_COMPARISONS):
-            func_vars[var_name] = self.check_equality(node_expression, func_vars)
+            scope_to_update[var_name] = self.check_equality(node_expression, scope_stack)
             if (self.trace_output == True):
-                print("\t\tUpdated func_vars: ", func_vars)
+                print("\t\tUpdated scope_stack: ", scope_stack)
 
         # Integer value comparison
         elif (node_type in self.INTEGER_COMPARISONS):
-            func_vars[var_name] = self.integer_compare(node_expression, func_vars)
+            scope_to_update[var_name] = self.integer_compare(node_expression, scope_stack)
             if (self.trace_output == True):
-                print("\t\tUpdated func_vars: ", func_vars)
+                print("\t\tUpdated scope_stack: ", scope_stack)
 
         # Function call
         elif (node_type == 'fcall'):
-            func_vars[var_name] = self.run_fcall(node_expression, func_vars)
+            scope_to_update[var_name] = self.run_fcall(node_expression, scope_stack)
             if (self.trace_output == True):
-                print("\t\tUpdated func_vars: ", func_vars)
+                print("\t\tUpdated scope_stack: ", scope_stack)
         
         # Nil value
         elif (node_type == 'nil'):
-            func_vars[var_name] = Element("nil")
+            scope_to_update[var_name] = Element("nil")
             if (self.trace_output == True):
-                print("\t\tUpdated func_vars: ", func_vars)
+                print("\t\tUpdated scope_stack: ", scope_stack)
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
                     f"Unrecognized expression \"{node_expression.elem_type}\" in variable assignment for {var_name}"
                 ) 
+            
+        # print("\tUpdated scope stack: ", scope_stack)
         
     ''' ---- If Statement ---- '''
     def check_condition(self, condition, func_vars):
@@ -377,7 +407,6 @@ class Interpreter(InterpreterBase):
             # Check variable is defined
             val = self.get_variable_value(condition, func_vars)
 
-            # val = func_vars[ condition.dict['name'] ]
             if (val is True) or (val is False):
                 eval_statements = val
             else:
@@ -514,7 +543,6 @@ class Interpreter(InterpreterBase):
         if node_type == 'var':
             val = self.get_variable_value(node, func_vars)
             # Check that variable type isn't a string
-            # val = func_vars[ node.dict['name'] ]
             if (isinstance( val,  str)):
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -781,14 +809,21 @@ class Interpreter(InterpreterBase):
     
 
     # TODO: This is probably where most of the shadowing logic will need to happen
-    def get_variable_value(self, node, defined_vars):
+    def get_variable_value(self, node, scope_stack):
+        
         var_name = node.dict['name']
-        if var_name not in defined_vars:
-            super().error(
+        for scope in scope_stack:
+            # If variable exists in this scope, this is the value you want to return
+            if var_name in scope:
+                return scope[var_name]
+        
+        # If not found in any scope, error
+        super().error(
                 ErrorType.NAME_ERROR,
                 f"Variable {var_name} has not been declared w/in function scope"
             )
-        return defined_vars[var_name]
+        
+
     
     ''' ---- INPUTI function ---- '''
     def inputi(self, prompt=[]):
