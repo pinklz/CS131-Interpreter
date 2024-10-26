@@ -404,14 +404,28 @@ class Interpreter(InterpreterBase):
         if self.trace_output:
             print("** Inside EVALUATE_IF\tNode: ", node)
 
-        print("** Inside EVALUATE_IF\tNode: ", node)
         condition = node.dict['condition']
-        eval_statements = False
         statements = node.dict['statements']
         else_statements = node.dict['else_statements']
 
         eval_condition = self.check_if_condition(condition, func_vars)
 
+        if (eval_condition):
+            # Loop through function statements in order
+            for statement_node in statements:
+                if (statement_node.elem_type == 'return'):
+                    return self.run_statement (statement_node, func_vars)
+                
+                # Otherwise, just execute the statement
+                self.run_statement( statement_node , func_vars)
+        else:
+            if else_statements != None:
+                for statement_node in else_statements:
+                    if (statement_node.elem_type == 'return'):
+                        return self.run_statement (statement_node, func_vars)
+                    
+                    # Otherwise, just execute the statement
+                    self.run_statement( statement_node , func_vars)
         
 
 
