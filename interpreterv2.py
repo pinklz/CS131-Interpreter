@@ -321,7 +321,6 @@ class Interpreter(InterpreterBase):
 
         scope_to_update = None
 
-        # Traverse stack in reverse order
         for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the one you want to update
             # ONLY EDIT TOPMOST SCOPE
@@ -482,9 +481,12 @@ class Interpreter(InterpreterBase):
         scope_stack.pop()
         
     ''' --- For Loop ---- '''
-    def run_for_loop(self, node, func_vars):
+    def run_for_loop(self, node, scope_stack):
         if self.trace_output:
             print("** Inside RUN FOR LOOP\tNode: ", node)
+
+        # print("\n-- Inside RUN_FOR_LOOP\tnode: ", node)
+        # print("\tPassed in scope stack: ", scope_stack)
 
         initialize = node.dict['init']
         condition = node.dict['condition']
@@ -492,26 +494,35 @@ class Interpreter(InterpreterBase):
         statements = node.dict['statements']
 
         # Initialize counter variable in variable dictionary
-        self.run_assign(initialize, func_vars)
+        self.run_assign(initialize, scope_stack)
 
         # Check condition is true to begin with
-        eval_condition = self.check_condition(condition, func_vars)
+        eval_condition = self.check_condition(condition, scope_stack)
 
         # While condition is true, execute statements
         while (eval_condition):
+            # Initialize new scope for this loop iteration
+            new_scope = {}
+            scope_stack.append( new_scope )
+
+
             # Loop through function statements in order
             for statement_node in statements:
                 if (statement_node.elem_type == 'return'):
-                    return self.run_statement (statement_node, func_vars)
+                    return self.run_statement (statement_node, scope_stack)
                 
                 # Otherwise, just execute the statement
-                self.run_statement( statement_node , func_vars)
+                self.run_statement( statement_node , scope_stack)
+
+            # Pop off new scope's variables when done running statements
+            scope_stack.pop()
 
             # Update counter variable value
-            self.run_assign(update, func_vars)
+            self.run_assign(update, scope_stack)
 
             # Check condition again
-            eval_condition = self.check_condition(condition, func_vars)
+            eval_condition = self.check_condition(condition, scope_stack)
+
 
 
     ''' ---- Overloaded Operation ---- '''
@@ -824,7 +835,7 @@ class Interpreter(InterpreterBase):
     def get_variable_value(self, node, scope_stack):
         
         var_name = node.dict['name']
-        # Traverse stack in reverse order
+
         for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the value you want to return
             if var_name in scope:
