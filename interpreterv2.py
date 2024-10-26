@@ -2,8 +2,6 @@ from brewparse import parse_program
 from intbase import *
 from element import Element
 
-## Checkpoint note - before any variable scoping
-
 class Interpreter(InterpreterBase):
     program_vars = {}
     defined_functions = {}      # should map function name to list of func nodes (for overloading)
@@ -75,7 +73,7 @@ class Interpreter(InterpreterBase):
                     print("\t\t", arg)
 
         # TODO: put these outside this function
-        ''' PRINT + INPTUTI handling'''
+        ''' PRINT + INPTUTI + INPUTS handling'''
         # Separate handling for: PRINT, INPUTI
         if func_name == 'inputi':
             if (self.trace_output == True):
@@ -208,7 +206,6 @@ class Interpreter(InterpreterBase):
 
     ''' ---- RUN STATEMENT ---- '''
     def run_statement(self, statement_node, func_vars):
-        # TODO: add cases for 'if', 'for', 'return'
         node_type = statement_node.elem_type
 
         # Run node's respective function
@@ -637,7 +634,7 @@ class Interpreter(InterpreterBase):
             if ( func_vars[ node.dict['name']] is not True) and ( func_vars[ node.dict['name']] is not False):
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"FOUND IT\nIncompatible types for BOOLEAN operation, attempted to use string (via existing variable {node.dict['name']} value)"
+                    f"Incompatible types for BOOLEAN operation, attempted to use string (via existing variable {node.dict['name']} value)"
                 )
             return func_vars[ node.dict['name'] ]
         
@@ -673,10 +670,6 @@ class Interpreter(InterpreterBase):
             return ( self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars) )
 
 
-        else:
-            print(" ** IN PROGRESS - working on other boolean operations ** ")
-            print("\tThis was the node passed in: ", node)
-
     ''' ---- Comparison Operations ---- '''
     def eval_op(self, node, func_vars):
             op_type = node.elem_type
@@ -707,10 +700,8 @@ class Interpreter(InterpreterBase):
             if op_type in self.EQUALITY_COMPARISONS:
                 return self.check_equality(node, func_vars)
             
-            print(" LEFT OFF HERE - to get op value of ", node)
 
-    def check_equality(self, node, func_vars):
-        
+    def check_equality(self, node, func_vars):   
         if (self.trace_output == True):
             print("CHECKING EQUALITY: ", node.elem_type)
 
