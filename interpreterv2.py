@@ -330,8 +330,6 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", latest_scope)
 
-        # print("\tNew scope_stack: ", scope_stack)
-
 
     ''' ---- Variable Assignment ---- '''
     def run_assign(self, node, scope_stack):
@@ -339,9 +337,6 @@ class Interpreter(InterpreterBase):
             print("\tInside RUN_ASSIGN")
         node_dict = node.dict
         var_name = node_dict['name']
-
-        # print("\n--Inside VAR_ASSIGN\tNode: ", node)
-        # print("\tPassed in scope stack: ", scope_stack)
 
         # Check that variable has been declared
         self.get_variable_value(node, scope_stack)
@@ -422,9 +417,6 @@ class Interpreter(InterpreterBase):
     ''' ---- If Statement ---- '''
     def check_condition(self, condition, func_vars):
         # If constant or variable
-        # print(" ++ This is the condition : ", condition)
-        # print("\tCondition type: ", condition.elem_type)
-
 
         if (condition.elem_type == 'bool'):
             eval_statements =  self.get_value(condition)
@@ -483,9 +475,6 @@ class Interpreter(InterpreterBase):
     def evaluate_if(self, node, scope_stack):
         if self.trace_output:
             print("** Inside EVALUATE_IF\tNode: ", node)
-
-        # print("\n-- Inside EVALUATE_IF\tnode: ", node)
-        # print("\tPassed in scope stack: ", scope_stack)
 
         new_scope = {}
         scope_stack.append( new_scope )
@@ -582,6 +571,11 @@ class Interpreter(InterpreterBase):
                 return self.run_int_operation(node, func_vars)
             if type(op1_value) == str:
                 return self.run_string_operation(node, func_vars)
+            else:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"No {node_type} operation defined for { type(op1_value) }"
+                )
     
     
     ''' ---- Evaluating Expressions / Operations ---- '''
@@ -602,6 +596,7 @@ class Interpreter(InterpreterBase):
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
             val = self.get_variable_value(node, func_vars)
+
             # Check that variable type isn't a string
             if (isinstance( val,  str)):
                 super().error(
@@ -614,6 +609,21 @@ class Interpreter(InterpreterBase):
                     ErrorType.TYPE_ERROR,
                     f"Incompatible types for arithmetic operation, attempted to use boolean (via existing variable {node.dict['name']} value)"
                 )
+
+            # If it's nil, it will have an elem_type
+                # if not, this will normally throw an excpetion
+            val_type = None
+            try:
+                val_type = val.elem_type
+            except:
+                pass
+            
+            if (val_type == "nil"):
+                super().error(
+                    ErrorType.TYPE_ERROR, 
+                    f"Tried to use NIL in for arithmetic operation(via existing variable {node.dict['name']} value)"
+                )
+
             return val
 
         # BASE: if operand is a VALUE --> return that value
@@ -627,7 +637,7 @@ class Interpreter(InterpreterBase):
             if (type (fcall_ret) != int):
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Function call in int operation did not return an int, return value: = {{fcall_ret}}"
+                    f"Function call in int operation did not return an int, return value: = { {fcall_ret} }"
                 )
             return fcall_ret
         
@@ -665,6 +675,8 @@ class Interpreter(InterpreterBase):
             print("STRING OPERATION: ", node.elem_type)
 
         node_type = node.elem_type
+
+        # TODO: if add more string ops, need to check for NIL
 
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
