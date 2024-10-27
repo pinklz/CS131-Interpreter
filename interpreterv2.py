@@ -876,7 +876,7 @@ class Interpreter(InterpreterBase):
 
         try:
             if (op1_value.elem_type == "nil") and (op2_value.elem_type == "nil"):
-                same = False 
+                same = True 
             elif (op1_value.elem_type == "nil") or (op2_value.elem_type == "nil"):
                 same = False
         except:
