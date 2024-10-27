@@ -6,6 +6,8 @@ from element import Element
 class ReturnValue(Exception):
     def __init__(self, return_value):
         self.return_value = return_value
+    def get_ret_value(self):
+        return self.return_value
 
 
 class Interpreter(InterpreterBase):
@@ -294,6 +296,9 @@ class Interpreter(InterpreterBase):
                     # If returning result of INTEGER COMPARISON
                     elif (return_exp_type in self.INTEGER_COMPARISONS):
                         return_val = self.integer_compare( return_expression, func_vars )
+
+                    if (return_val == None):
+                        print("ERR: no return value set")
 
                 raise ReturnValue(return_val)
 
@@ -589,6 +594,12 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("INT OPERATION: ", node.elem_type)
 
+        if (node is None):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attemped to use type 'None' in boolean operation"
+            )
+
         node_type = node.elem_type
 
          # BASE: if operand is a VARIABLE --> return that variable's value
@@ -704,10 +715,17 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
 
+
         if (node is True):
             return True 
         if (node is False):
             return False
+        
+        if (node is None):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attemped to use type 'None' in boolean operation"
+            )
 
         node_type = node.elem_type
 
@@ -771,6 +789,7 @@ class Interpreter(InterpreterBase):
             # Get actual value
             op1_value = self.eval_op(op1, func_vars)
             op2_value = self.eval_op(op2, func_vars)
+
             return ( self.run_bool_operation(op1_value, func_vars) and self.run_bool_operation(op2_value, func_vars) )
 
 
