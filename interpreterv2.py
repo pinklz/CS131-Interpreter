@@ -118,33 +118,6 @@ class Interpreter(InterpreterBase):
         if builtin != None:
             return builtin
 
-        # # TODO: put these outside this function
-        # ''' PRINT + INPTUTI + INPUTS handling'''
-        # # Separate handling for: PRINT, INPUTI
-        # if func_name == 'inputi':
-        #     if (self.trace_output == True):
-        #         print("\tCalling inputi function")
-        #     if (len (node_dict['args']) > 1):
-        #         super().error(
-        #             ErrorType.NAME_ERROR,
-        #             f"No inputi() function found that takes more than 1 parameter"
-        #         )
-        #     return self.inputi(node_dict['args'])
-        
-        # if func_name == 'inputs':
-        #     if (self.trace_output == True):
-        #         print("\tCalling inputs function")
-        #     if (len (node_dict['args']) > 1):
-        #         super().error(
-        #             ErrorType.NAME_ERROR,
-        #             f"No inputs() function found that takes more than 1 parameter"
-        #         )
-        #     return self.inputs(node_dict['args'])
-        
-        # if func_name == 'print':
-        #     return self.printout(calling_func_vars, node_dict['args'])
-        # ''' END OF SEPARATE HANDLING '''
-
 
         # For all other function calls: 
         if (func_name not in self.defined_functions):
@@ -249,13 +222,10 @@ class Interpreter(InterpreterBase):
                 self.run_statement(statement_node, scope_stack)
             # If RETURN is found, should throw an exception
             except ReturnValue as rval:
-                # print("\n***** Caught return value ****\n\tHere's what was returned: ", rval)
-
                 # Remove all added scopes from inside function
                 while (len(scope_stack) > 1):
                     scope_stack.pop()
 
-                # print("\t\tCurrent scope stack: ", scope_stack)
                 return rval.return_value
 
         # If exit list of statements without reaching a return statement, return NIL
@@ -327,7 +297,6 @@ class Interpreter(InterpreterBase):
                     elif (return_exp_type in self.INTEGER_COMPARISONS):
                         return_val = self.integer_compare( return_expression, func_vars )
 
-                # print("-- Raising return value -- ")
                 raise ReturnValue(return_val)
 
             case _:
@@ -448,11 +417,15 @@ class Interpreter(InterpreterBase):
                     f"Unrecognized expression \"{node_expression.elem_type}\" in variable assignment for {var_name}"
                 ) 
             
-        # print("\tUpdated scope stack: ", scope_stack)
+        print("\tUpdated scope stack: ", scope_stack)
         
     ''' ---- If Statement ---- '''
     def check_condition(self, condition, func_vars):
         # If constant or variable
+        # print(" ++ This is the condition : ", condition)
+        # print("\tCondition type: ", condition.elem_type)
+
+
         if (condition.elem_type == 'bool'):
             eval_statements =  self.get_value(condition)
         elif (condition.elem_type == 'int' or condition.elem_type == 'string'):
@@ -491,6 +464,12 @@ class Interpreter(InterpreterBase):
             eval_statements = self.integer_compare(condition, func_vars)
         elif (condition.elem_type in self.BOOL_OPERATIONS):
             eval_statements = self.run_bool_operation(condition, func_vars)
+
+        elif (eval_statements is not True and eval_statements is not False):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Condition did not evaluate to boolean value { { eval_statements } }"
+            )
         
         # CHECK : IF none of these, is likely an integer expression
         else:
@@ -721,7 +700,14 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
 
+        if (node is True):
+            return True 
+        if (node is False):
+            return False
+
         node_type = node.elem_type
+
+        # print ("\n-- In RUN_BOOL_OP: node  is ", node)
 
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
@@ -764,13 +750,24 @@ class Interpreter(InterpreterBase):
         if node_type == '||':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return ( self.run_bool_operation(op1, func_vars) or self.run_bool_operation(op2, func_vars) )
+            # print(" \t(RUN_BOOL_OP) op1 = ", op1, "\top2 = ", op2)
+            op1_value = self.eval_op(op1, func_vars)
+            op2_value = self.eval_op(op2, func_vars)
+            # print("\tAFTER calling EVAL OP: ", op1_value, op2_value)
+            # return ( self.run_bool_operation(op1, func_vars) or self.run_bool_operation(op2, func_vars) )
+            return ( self.run_bool_operation(op1_value, func_vars) or self.run_bool_operation(op2_value, func_vars) )
         
         # Boolean AND
         if node_type == '&&':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            return ( self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars) )
+            # print(" \t(RUN_BOOL_OP) op1 = ", op1, "\top2 = ", op2)
+            op1_value = self.eval_op(op1, func_vars)
+            op2_value = self.eval_op(op2, func_vars)
+            # print("\tAFTER calling EVAL OP: ", op1_value, op2_value)
+            # return ( self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars) )
+            return ( self.run_bool_operation(op1_value, func_vars) and self.run_bool_operation(op2_value, func_vars) )
+
 
 
     ''' ---- Comparison Operations ---- '''
@@ -816,27 +813,35 @@ class Interpreter(InterpreterBase):
         op1_value = self.eval_op(op1, func_vars)
         op2_value = self.eval_op(op2, func_vars)
 
+
+        # print(" -- In CHECK_EQUALITY: \tOp1 value: ", op1_value, "\tOp2 value: ", op2_value)
+        # print("\t\tTypes: ", type (op1_value), type(op2_value))
+
         same = None
 
-        # SPECIAL case: 'nil' values
-        if (op1_value == 'nil') and (op2_value == 'nil'):
-            same = True
-        elif (op1_value == 'nil') or (op2_value == 'nil'):
-            same = False
 
         # If both are bool
-        elif ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
+        if ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
             same = True
         elif ( (op1_value is True) and (op2_value is False)) or ((op1_value is False) and (op2_value is True)):
             same = False
+
         
         # If different types
-        if ( type(op1_value) != type(op2_value) ):
+        elif ( type(op1_value) != type(op2_value) ):
             if (self.trace_output == True):
                 print("\t False -- different types for ", op1_value, " and ", op2_value)
             same = False
         else:
             same = (op1_value == op2_value)
+
+        try:
+            if (op1_value.elem_type == "nil") and (op2_value.elem_type == "nil"):
+                same = True 
+            elif (op1_value.elem_type == "nil") or (op2_value.elem_type == "nil"):
+                same = False
+        except:
+            pass
 
         # Actually perform equality check
         if node_type == '==':
