@@ -362,8 +362,10 @@ class Interpreter(InterpreterBase):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
         # # If another variable
-        # if (node_type == 'var'):
-        #     scope_to_update[var_name] = self.get_variable_value(node_expression, scope_stack)
+        elif (node_type == 'var'):
+            scope_to_update[var_name] = self.get_variable_value(node_expression, scope_stack)
+            if (self.trace_output == True):
+                print("\t\tUpdated scope_stack: ", scope_stack)
 
         # Using an OVERLOADED operator
         elif (node_type in self.OVERLOADED_OPERATIONS):
@@ -409,7 +411,7 @@ class Interpreter(InterpreterBase):
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Unrecognized expression \"{node_expression.elem_type}\" in variable assignment for {var_name}"
+                    f"Unrecognized expression \"{node_type}\" in variable assignment for {var_name}"
                 ) 
             
         # print("\tUpdated scope stack: ", scope_stack)
