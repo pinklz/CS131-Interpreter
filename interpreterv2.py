@@ -32,7 +32,6 @@ class Interpreter(InterpreterBase):
             self.program_vars = map to hold variables + their values
         '''
         self.ast = parse_program(program)
-        self.program_vars = {}
 
         ''' ---- Find Main Node ---- '''
         # Check program validity
@@ -213,8 +212,6 @@ class Interpreter(InterpreterBase):
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
 
-        # print("-- IN RUN_FUNC\tScope Stack: ", scope_stack)
-
         # Loop through function statements in order
         for statement_node in node_dict['statements']:
             # Run each statement
@@ -297,7 +294,7 @@ class Interpreter(InterpreterBase):
                     elif (return_exp_type in self.INTEGER_COMPARISONS):
                         return_val = self.integer_compare( return_expression, func_vars )
 
-                    if (return_val == None):
+                    if (return_val == None):  
                         print("ERR: no return value set")
 
                 raise ReturnValue(return_val)
@@ -635,10 +632,10 @@ class Interpreter(InterpreterBase):
             return fcall_ret
         
         # If try to operate on a string --> error
-        if node_type == 'string':
+        if node_type == 'string' or node_type == 'nil':
             super().error(
                 ErrorType.TYPE_ERROR,
-                "Incompatible types for arithmetic operation, attempted to use string"
+                "Incompatible types for arithmetic operation, attempted to use string or nil"
             )
 
         # UNARY operation (integer negation)
@@ -715,7 +712,6 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
 
-
         if (node is True):
             return True 
         if (node is False):
@@ -729,8 +725,6 @@ class Interpreter(InterpreterBase):
 
         node_type = node.elem_type
 
-        # print ("\n-- In RUN_BOOL_OP: node  is ", node)
-
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
             val = self.get_variable_value(node, func_vars)
@@ -743,10 +737,10 @@ class Interpreter(InterpreterBase):
                 )
             return val
         
-        if node_type == 'string' or node_type == 'int':
+        if node_type == 'string' or node_type == 'int' or node_type == 'nil':
             super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Incompatible types for BOOLEAN operation, attempted to use string or integer constant value)"
+                    f"Incompatible types for BOOLEAN operation, attempted to use string, integer, or nil constant value)"
                 )
             
         if node_type == 'bool':
