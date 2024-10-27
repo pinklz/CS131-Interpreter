@@ -2,6 +2,14 @@ from brewparse import parse_program
 from intbase import *
 from element import Element
 
+# Custom exception class to catch return values
+class ReturnValue(Exception):
+    def __init__(self, return_value):
+        self.return_value = return_value
+    def get_ret_value(self):
+        return self.return_value
+
+
 class Interpreter(InterpreterBase):
     program_vars = {}
     defined_functions = {}      # should map function name to list of func nodes (for overloading)
@@ -198,11 +206,14 @@ class Interpreter(InterpreterBase):
 
         # Loop through function statements in order
         for statement_node in node_dict['statements']:
-            if (statement_node.elem_type == 'return'):
-                return self.run_statement (statement_node, scope_stack)
-            
-            # Otherwise, just execute the statement
-            self.run_statement( statement_node , scope_stack)
+            # Run each statement
+            try:
+                self.run_statement(statement_node, scope_stack)
+            # If RETURN is found, should throw an exception
+            except ReturnValue as rval:
+                # print("\n***** Caught return value ****\n\tHere's what was returned: ", rval)
+                # print("\t\tCurrent scope stack: ", scope_stack)
+                return rval
 
         # If exit list of statements without reaching a return statement, return NIL
         return Element("nil")
@@ -236,41 +247,45 @@ class Interpreter(InterpreterBase):
                 self.run_for_loop(statement_node, func_vars)
             case 'return':
                 return_expression = statement_node.dict['expression']
+
+                return_val = None
+
                 if return_expression == None or return_expression.elem_type == "nil":
-                    return Element("nil")
-                return_exp_type = return_expression.elem_type
-
-                # If returning a CONSTANT value
-                if (return_exp_type in ['int', 'string', 'bool']):
-                    return self.get_value(return_expression)
-                
-                # If returning a VARIABLE value
-                if (return_exp_type == 'var'):
-                    return self.get_variable_value(return_expression, func_vars)
-                
-                # If using an OVERLOADED OPERATOR 
-                if (return_exp_type in self.OVERLOADED_OPERATIONS):
-                    return self.overloaded_operator(return_expression, func_vars)
-                
-                # If returning an OPERATION
-                if (return_exp_type in self.INT_OPERATIONS):
-                    return self.run_int_operation( return_expression, func_vars )
-                
-                # If returning result of BOOLEAN operation
-                if (return_exp_type in self.BOOL_OPERATIONS):
-                    return self.run_bool_operation( return_expression, func_vars )
-                
-                # If returning result of EQUALITY comparison operation
-                if (return_exp_type in self.EQUALITY_COMPARISONS):
-                    return self.check_equality( return_expression, func_vars )
-                
-                # If returning result of INTEGER COMPARISON
-                if (return_exp_type in self.INTEGER_COMPARISONS):
-                    return self.integer_compare( return_expression, func_vars )
-                
-
+                    return_val = Element("nil")
                 else:
-                    print("THIS IS WHERE I LEFT OFF< NOT DONE YET")
+                    return_exp_type = return_expression.elem_type
+
+
+                    # If returning a CONSTANT value
+                    if (return_exp_type in ['int', 'string', 'bool']):
+                        return_val = self.get_value(return_expression)
+                    
+                    # If returning a VARIABLE value
+                    elif (return_exp_type == 'var'):
+                        return_val = self.get_variable_value(return_expression, func_vars)
+                    
+                    # If using an OVERLOADED OPERATOR 
+                    elif (return_exp_type in self.OVERLOADED_OPERATIONS):
+                        return_val = self.overloaded_operator(return_expression, func_vars)
+                    
+                    # If returning an OPERATION
+                    elif (return_exp_type in self.INT_OPERATIONS):
+                        return_val = self.run_int_operation( return_expression, func_vars )
+                    
+                    # If returning result of BOOLEAN operation
+                    elif (return_exp_type in self.BOOL_OPERATIONS):
+                        return_val = self.run_bool_operation( return_expression, func_vars )
+                    
+                    # If returning result of EQUALITY comparison operation
+                    elif (return_exp_type in self.EQUALITY_COMPARISONS):
+                        return_val = self.check_equality( return_expression, func_vars )
+                    
+                    # If returning result of INTEGER COMPARISON
+                    elif (return_exp_type in self.INTEGER_COMPARISONS):
+                        return_val = self.integer_compare( return_expression, func_vars )
+
+                # print("-- Raising return value -- ")
+                raise ReturnValue(return_val)
 
             case _:
                 super().error(
@@ -321,6 +336,7 @@ class Interpreter(InterpreterBase):
 
         scope_to_update = None
 
+        # Traverse stack in reverse order
         for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the one you want to update
             # ONLY EDIT TOPMOST SCOPE
@@ -469,11 +485,14 @@ class Interpreter(InterpreterBase):
         else:
             if else_statements != None:
                 for statement_node in else_statements:
-                    if (statement_node.elem_type == 'return'):
-                        return self.run_statement (statement_node, scope_stack)
+                    self.run_statement( statement_node, scope_stack)
+
+
+                    # if (statement_node.elem_type == 'return'):
+                    #     return self.run_statement (statement_node, scope_stack)
                     
-                    # Otherwise, just execute the statement
-                    self.run_statement( statement_node , scope_stack)
+                    # # Otherwise, just execute the statement
+                    # self.run_statement( statement_node , scope_stack)
 
         # Pop off new scope's variables
         # TODO: also need to pop off if return early
@@ -508,13 +527,10 @@ class Interpreter(InterpreterBase):
 
             # Loop through function statements in order
             for statement_node in statements:
-                if (statement_node.elem_type == 'return'):
-                    return self.run_statement (statement_node, scope_stack)
-                
-                # Otherwise, just execute the statement
                 self.run_statement( statement_node , scope_stack)
 
             # Pop off new scope's variables when done running statements
+            # TODO: pop off when return early
             scope_stack.pop()
 
             # Update counter variable value
@@ -831,11 +847,9 @@ class Interpreter(InterpreterBase):
         return node.dict['val']
     
 
-    # TODO: This is probably where most of the shadowing logic will need to happen
     def get_variable_value(self, node, scope_stack):
         
         var_name = node.dict['name']
-
         for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the value you want to return
             if var_name in scope:
