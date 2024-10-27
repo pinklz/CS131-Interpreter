@@ -64,23 +64,10 @@ class Interpreter(InterpreterBase):
         # Run MAIN node
         return self.run_func(main_node, [])
 
-    ''' ---- HANDLE fcall ---- '''
-    def run_fcall(self, func_node, calling_func_vars):
-        # calling_func_vars = variables defined by the calling function (where the statement was)
+    def check_builtin_funcs(self, func_node, scope_stack):
         node_dict = func_node.dict
         func_name = node_dict['name']
-        func_args = node_dict['args']   # arguments passed into the function call
 
-        if (self.trace_output):
-            if (func_args == []):
-                print("** RUN FCALL -- NO args provided")
-            else:
-                print("** RUN FCALL")
-                print("\tProvided arguments: ")
-                for arg in func_args:
-                    print("\t\t", arg)
-
-        # TODO: put these outside this function
         ''' PRINT + INPTUTI + INPUTS handling'''
         # Separate handling for: PRINT, INPUTI
         if func_name == 'inputi':
@@ -104,8 +91,59 @@ class Interpreter(InterpreterBase):
             return self.inputs(node_dict['args'])
         
         if func_name == 'print':
-            return self.printout(calling_func_vars, node_dict['args'])
+            return self.printout(scope_stack, node_dict['args'])
         ''' END OF SEPARATE HANDLING '''
+
+        return None
+
+
+    ''' ---- HANDLE fcall ---- '''
+    def run_fcall(self, func_node, calling_func_vars):
+        # calling_func_vars = variables defined by the calling function (where the statement was)
+        node_dict = func_node.dict
+        func_name = node_dict['name']
+        func_args = node_dict['args']   # arguments passed into the function call
+
+        if (self.trace_output):
+            if (func_args == []):
+                print("** RUN FCALL -- NO args provided")
+            else:
+                print("** RUN FCALL")
+                print("\tProvided arguments: ")
+                for arg in func_args:
+                    print("\t\t", arg)
+
+        # Check if Print, Inputi, or Inputs
+        builtin = self.check_builtin_funcs(func_node, calling_func_vars)
+        if builtin != None:
+            return builtin
+
+        # # TODO: put these outside this function
+        # ''' PRINT + INPTUTI + INPUTS handling'''
+        # # Separate handling for: PRINT, INPUTI
+        # if func_name == 'inputi':
+        #     if (self.trace_output == True):
+        #         print("\tCalling inputi function")
+        #     if (len (node_dict['args']) > 1):
+        #         super().error(
+        #             ErrorType.NAME_ERROR,
+        #             f"No inputi() function found that takes more than 1 parameter"
+        #         )
+        #     return self.inputi(node_dict['args'])
+        
+        # if func_name == 'inputs':
+        #     if (self.trace_output == True):
+        #         print("\tCalling inputs function")
+        #     if (len (node_dict['args']) > 1):
+        #         super().error(
+        #             ErrorType.NAME_ERROR,
+        #             f"No inputs() function found that takes more than 1 parameter"
+        #         )
+        #     return self.inputs(node_dict['args'])
+        
+        # if func_name == 'print':
+        #     return self.printout(calling_func_vars, node_dict['args'])
+        # ''' END OF SEPARATE HANDLING '''
 
 
         # For all other function calls: 
