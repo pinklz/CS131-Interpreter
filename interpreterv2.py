@@ -6,8 +6,6 @@ from element import Element
 class ReturnValue(Exception):
     def __init__(self, return_value):
         self.return_value = return_value
-    def get_ret_value(self):
-        return self.return_value
 
 
 class Interpreter(InterpreterBase):
@@ -758,22 +756,21 @@ class Interpreter(InterpreterBase):
         if node_type == '||':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            # print(" \t(RUN_BOOL_OP) op1 = ", op1, "\top2 = ", op2)
+
+            # Get actual value
             op1_value = self.eval_op(op1, func_vars)
             op2_value = self.eval_op(op2, func_vars)
-            # print("\tAFTER calling EVAL OP: ", op1_value, op2_value)
-            # return ( self.run_bool_operation(op1, func_vars) or self.run_bool_operation(op2, func_vars) )
+            
             return ( self.run_bool_operation(op1_value, func_vars) or self.run_bool_operation(op2_value, func_vars) )
         
         # Boolean AND
         if node_type == '&&':
             op1 = node.dict['op1']
             op2 = node.dict['op2']
-            # print(" \t(RUN_BOOL_OP) op1 = ", op1, "\top2 = ", op2)
+
+            # Get actual value
             op1_value = self.eval_op(op1, func_vars)
             op2_value = self.eval_op(op2, func_vars)
-            # print("\tAFTER calling EVAL OP: ", op1_value, op2_value)
-            # return ( self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars) )
             return ( self.run_bool_operation(op1_value, func_vars) and self.run_bool_operation(op2_value, func_vars) )
 
 
