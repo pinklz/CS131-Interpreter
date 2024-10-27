@@ -212,8 +212,13 @@ class Interpreter(InterpreterBase):
             # If RETURN is found, should throw an exception
             except ReturnValue as rval:
                 # print("\n***** Caught return value ****\n\tHere's what was returned: ", rval)
+
+                # Remove all added scopes from inside function
+                while (len(scope_stack) > 1):
+                    scope_stack.pop()
+
                 # print("\t\tCurrent scope stack: ", scope_stack)
-                return rval
+                return rval.return_value
 
         # If exit list of statements without reaching a return statement, return NIL
         return Element("nil")
@@ -486,13 +491,6 @@ class Interpreter(InterpreterBase):
             if else_statements != None:
                 for statement_node in else_statements:
                     self.run_statement( statement_node, scope_stack)
-
-
-                    # if (statement_node.elem_type == 'return'):
-                    #     return self.run_statement (statement_node, scope_stack)
-                    
-                    # # Otherwise, just execute the statement
-                    # self.run_statement( statement_node , scope_stack)
 
         # Pop off new scope's variables
         # TODO: also need to pop off if return early
