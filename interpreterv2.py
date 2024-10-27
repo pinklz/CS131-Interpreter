@@ -170,6 +170,8 @@ class Interpreter(InterpreterBase):
                 # Integer comparison
             elif arg.elem_type in self.INTEGER_COMPARISONS:
                 func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
+            elif arg.elem_type == 'nil':
+                func_arg_values.append( arg )
             else:
                 print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
                 # TODO: if error, likely is in missing a case here
@@ -339,7 +341,7 @@ class Interpreter(InterpreterBase):
         var_name = node_dict['name']
 
         # Check that variable has been declared
-        self.get_variable_value(node, scope_stack)
+        # self.get_variable_value(node, scope_stack)
 
         scope_to_update = None
 
@@ -350,6 +352,13 @@ class Interpreter(InterpreterBase):
             if var_name in scope:
                 scope_to_update = scope
                 break
+
+        # If not found in any scope
+        if scope_to_update == None:
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Variable { {var_name} }not found in any scope"
+            )
 
 
         # Calculate expression
@@ -413,13 +422,12 @@ class Interpreter(InterpreterBase):
                     ErrorType.TYPE_ERROR,
                     f"Unrecognized expression \"{node_type}\" in variable assignment for {var_name}"
                 ) 
-            
-        # print("\tUpdated scope stack: ", scope_stack)
-        
+
+
     ''' ---- If Statement ---- '''
     def check_condition(self, condition, func_vars):
-        # If constant or variable
-
+        
+        # If constant value
         if (condition.elem_type == 'bool'):
             eval_statements =  self.get_value(condition)
         elif (condition.elem_type == 'int' or condition.elem_type == 'string'):
@@ -458,12 +466,6 @@ class Interpreter(InterpreterBase):
             eval_statements = self.integer_compare(condition, func_vars)
         elif (condition.elem_type in self.BOOL_OPERATIONS):
             eval_statements = self.run_bool_operation(condition, func_vars)
-
-        elif (eval_statements is not True and eval_statements is not False):
-            super().error(
-                ErrorType.TYPE_ERROR,
-                f"Condition did not evaluate to boolean value { { eval_statements } }"
-            )
         
         # CHECK : IF none of these, is likely an integer expression
         else:
@@ -472,6 +474,11 @@ class Interpreter(InterpreterBase):
                     f"Unrecognized expression type { {condition.elem_type} } for 'if' condition: { {condition} }"
                 )
 
+        if (eval_statements is not True and eval_statements is not False):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Condition did not evaluate to boolean value { { eval_statements } }"
+            )
         return eval_statements
 
     def evaluate_if(self, node, scope_stack):
