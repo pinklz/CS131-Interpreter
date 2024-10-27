@@ -417,7 +417,7 @@ class Interpreter(InterpreterBase):
                     f"Unrecognized expression \"{node_expression.elem_type}\" in variable assignment for {var_name}"
                 ) 
             
-        print("\tUpdated scope stack: ", scope_stack)
+        # print("\tUpdated scope stack: ", scope_stack)
         
     ''' ---- If Statement ---- '''
     def check_condition(self, condition, func_vars):
@@ -617,7 +617,13 @@ class Interpreter(InterpreterBase):
         if node_type == 'fcall':
             if (self.trace_output == True):
                 print("EXPRESSION USES A FUNCTION CALL")
-            return self.run_fcall(node, func_vars)
+            fcall_ret = self.run_fcall(node, func_vars)
+            if (type (fcall_ret) != int):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Function call in int operation did not return an int, return value: = {{fcall_ret}}"
+                )
+            return fcall_ret
         
         # If try to operate on a string --> error
         if node_type == 'string':
@@ -713,13 +719,7 @@ class Interpreter(InterpreterBase):
         if node_type == 'var':
             val = self.get_variable_value(node, func_vars)
 
-            if (isinstance( val, str)):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Incompatible types for BOOLEAN operation, attempted to use string (via existing variable {node.dict['name']} value)"
-                )
-
-            # CHECK: this should check for integers, and even exlude 0 and 1
+            # CHECK: this should check for strings and integers, and even exlude 0 and 1
             if ( val is not True) and ( val is not False):
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -740,7 +740,15 @@ class Interpreter(InterpreterBase):
         if node_type == 'fcall':
             if (self.trace_output == True):
                 print("EXPRESSION USES A FUNCTION CALL")
-            return self.run_fcall(node, func_vars)
+            # Calls FCALL
+            fcall_ret = self.run_fcall(node, func_vars)
+            if (fcall_ret is not True) and (fcall_ret is not False):
+                # returned a non-boolean value
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Function call in boolean operation did not return a bool, return value = {{fcall_ret}}"
+                )
+            return fcall_ret
             
         # Unary Boolean NOT
         if node_type == '!':
