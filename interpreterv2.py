@@ -430,10 +430,10 @@ class Interpreter(InterpreterBase):
         # If constant value
         if (condition.elem_type == 'bool'):
             eval_statements =  self.get_value(condition)
-        elif (condition.elem_type == 'int' or condition.elem_type == 'string'):
+        elif (condition.elem_type == 'int' or condition.elem_type == 'string' or condition.elem_type == 'nil'):
             super().error(
                 ErrorType.TYPE_ERROR,
-                f"Cannot evaluate STRING or INT in 'if' statement condition"
+                f"Cannot evaluate STRING or INT or NIL in 'if' statement condition"
             )
         
         # If variable value
@@ -497,10 +497,6 @@ class Interpreter(InterpreterBase):
         if (eval_condition):
             # Loop through function statements in order
             for statement_node in statements:
-                if (statement_node.elem_type == 'return'):
-                    return self.run_statement (statement_node, scope_stack)
-                
-                # Otherwise, just execute the statement
                 self.run_statement( statement_node , scope_stack)
         else:
             if else_statements != None:
@@ -891,13 +887,13 @@ class Interpreter(InterpreterBase):
         elif (op1_type == 'nil') or (op2_type == 'nil'):
             same = False
 
-        # try:
-        #     if (op1_value.elem_type == "nil") and (op2_value.elem_type == "nil"):
-        #         same = True 
-        #     elif (op1_value.elem_type == "nil") or (op2_value.elem_type == "nil"):
-        #         same = False
-        # except:
-        #     pass
+        # TODO: remove here if this doesn't change anything
+        # SPECIAL case: 'nil' values
+        if (op1_value == 'nil') and (op2_value == 'nil'):
+            same = True
+        elif (op1_value == 'nil') or (op2_value == 'nil'):
+            same = False
+
 
         # Actually perform equality check
         if node_type == '==':
