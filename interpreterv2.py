@@ -617,14 +617,9 @@ class Interpreter(InterpreterBase):
 
             # If it's nil, it will have an elem_type
                 # if not, this will normally throw an excpetion
-            val_type = None
-            try:
-                val_type = val.elem_type
-            except:
-                pass
-            
-            if (val_type == "nil"):
-                super().error(
+            if (type(val) == Element):
+                if val.elem_type == 'nil':
+                    super().error(
                     ErrorType.TYPE_ERROR, 
                     f"Tried to use NIL in for arithmetic operation(via existing variable {node.dict['name']} value)"
                 )
@@ -789,6 +784,20 @@ class Interpreter(InterpreterBase):
             # Get actual value
             op1_value = self.eval_op(op1, func_vars)
             op2_value = self.eval_op(op2, func_vars)
+
+            if type(op1_value) == Element:
+                if op1_value.elem_type == 'nil':
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Attempted to use 'nil' operator in BOOL operation via op1 in {node}"
+                    )
+            
+            if type(op2_value) == Element:
+                if op2_value.elem_type == 'nil':
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Attempted to use 'nil' operator in BOOL operation via op2 in {node}"
+            )
             
             return ( self.run_bool_operation(op1_value, func_vars) or self.run_bool_operation(op2_value, func_vars) )
         
@@ -800,7 +809,20 @@ class Interpreter(InterpreterBase):
             # Get actual value
             op1_value = self.eval_op(op1, func_vars)
             op2_value = self.eval_op(op2, func_vars)
-
+            
+            if type(op1_value) == Element:
+                if op1_value.elem_type == 'nil':
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Attempted to use 'nil' operator in BOOL operation via op1 in {node}"
+                    )
+            
+            if type(op2_value) == Element:
+                if op2_value.elem_type == 'nil':
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Attempted to use 'nil' operator in BOOL operation via op2 in {node}"
+                    )
             return ( self.run_bool_operation(op1_value, func_vars) and self.run_bool_operation(op2_value, func_vars) )
 
 
@@ -854,6 +876,12 @@ class Interpreter(InterpreterBase):
 
         same = None
 
+        if (type(op1_value) == Element) and (type(op2_value) == Element):
+            if (op1_value.elem_type == 'nil') and (op2_value.elem_type == 'nil'):
+                same = True
+            elif (op1_value.elem_type == 'nil') or (op2_value.elem_type == 'nil'):
+                same = False
+
 
         # If both are bool
         if ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
@@ -870,30 +898,25 @@ class Interpreter(InterpreterBase):
         else:
             same = (op1_value == op2_value)
 
-        op1_type = None
-        op2_type = None
-        try:
-            op1_type = op1_value.elem_type
-        except:
-            pass
 
-        try:
-            op2_type = op2_value.elem_type
-        except:
-            pass
+        # op1_type = None
+        # op2_type = None
+        # try:
+        #     op1_type = op1_value.elem_type
+        # except:
+        #     pass
 
-        if (op1_type == 'nil' and op2_type == 'nil'):
-            same = True
-        elif (op1_type == 'nil') or (op2_type == 'nil'):
-            same = False
+        # try:
+        #     op2_type = op2_value.elem_type
+        # except:
+        #     pass
 
-        # TODO: remove here if this doesn't change anything
-        # SPECIAL case: 'nil' values
-        if (op1_value == 'nil') and (op2_value == 'nil'):
-            same = True
-        elif (op1_value == 'nil') or (op2_value == 'nil'):
-            same = False
-
+        # if (op1_type == 'nil' and op2_type == 'nil'):
+        #     same = True
+        # elif (op1_type == 'nil') or (op2_type == 'nil'):
+        #     same = False
+        
+        
 
         # Actually perform equality check
         if node_type == '==':
