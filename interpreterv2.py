@@ -855,7 +855,7 @@ class Interpreter(InterpreterBase):
         same = None
 
         if (type(op1_value) == Element) and (type(op2_value) == Element):
-            if (op1_value.elem_type == 'nil') and (op2_value.elem_type == 'nil')
+            if (op1_value.elem_type == 'nil') and (op2_value.elem_type == 'nil'):
             same = True
         elif (type(op1_value == Element) and op1_value.elem_type == 'nil'):
             same = False
