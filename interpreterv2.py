@@ -874,13 +874,30 @@ class Interpreter(InterpreterBase):
         else:
             same = (op1_value == op2_value)
 
+        op1_type = None
+        op2_type = None
         try:
-            if (op1_value.elem_type == "nil") and (op2_value.elem_type == "nil"):
-                same = True 
-            elif (op1_value.elem_type == "nil") or (op2_value.elem_type == "nil"):
-                same = False
+            op1_type = op1_value.elem_type
         except:
             pass
+
+        try:
+            op2_type = op1_value.elem_type
+        except:
+            pass
+
+        if (op1_type == 'nil' and op2_type == 'nil'):
+            same = True
+        elif (op1_type == 'nil') or (op2_type == 'nil'):
+            same = False
+
+        # try:
+        #     if (op1_value.elem_type == "nil") and (op2_value.elem_type == "nil"):
+        #         same = True 
+        #     elif (op1_value.elem_type == "nil") or (op2_value.elem_type == "nil"):
+        #         same = False
+        # except:
+        #     pass
 
         # Actually perform equality check
         if node_type == '==':
