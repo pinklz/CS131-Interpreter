@@ -882,7 +882,7 @@ class Interpreter(InterpreterBase):
             pass
 
         try:
-            op2_type = op1_value.elem_type
+            op2_type = op2_value.elem_type
         except:
             pass
 
