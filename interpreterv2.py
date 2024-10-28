@@ -854,6 +854,14 @@ class Interpreter(InterpreterBase):
 
         same = None
 
+        if (type(op1_value) == Element) and (type(op2_value) == Element):
+            if (op1_value.elem_type == 'nil') and (op2_value.elem_type == 'nil')
+            same = True
+        elif (type(op1_value == Element) and op1_value.elem_type == 'nil'):
+            same = False
+        elif (type(op2_value == Element) and op2_value.elem_type == 'nil'):
+            same = False
+
 
         # If both are bool
         if ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
@@ -870,29 +878,29 @@ class Interpreter(InterpreterBase):
         else:
             same = (op1_value == op2_value)
 
-        op1_type = None
-        op2_type = None
-        try:
-            op1_type = op1_value.elem_type
-        except:
-            pass
+        # op1_type = None
+        # op2_type = None
+        # try:
+        #     op1_type = op1_value.elem_type
+        # except:
+        #     pass
 
-        try:
-            op2_type = op2_value.elem_type
-        except:
-            pass
+        # try:
+        #     op2_type = op2_value.elem_type
+        # except:
+        #     pass
 
-        if (op1_type == 'nil' and op2_type == 'nil'):
-            same = True
-        elif (op1_type == 'nil') or (op2_type == 'nil'):
-            same = False
+        # if (op1_type == 'nil' and op2_type == 'nil'):
+        #     same = True
+        # elif (op1_type == 'nil') or (op2_type == 'nil'):
+        #     same = False
 
         # TODO: remove here if this doesn't change anything
         # SPECIAL case: 'nil' values
-        if (op1_value == 'nil') and (op2_value == 'nil'):
-            same = True
-        elif (op1_value == 'nil') or (op2_value == 'nil'):
-            same = False
+        # if (op1_value == 'nil') and (op2_value == 'nil'):
+        #     same = True
+        # elif (op1_value == 'nil') or (op2_value == 'nil'):
+        #     same = False
 
 
         # Actually perform equality check
