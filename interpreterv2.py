@@ -210,9 +210,9 @@ class Interpreter(InterpreterBase):
                     print("\t\t", arg)
 
         # Map argument values to the parameter names
-        if (node_params != []):
-            for (var_name, var_value) in zip(node_params, func_args):
-                func_vars[var_name.dict['name']] = var_value
+        # if (node_params != []):
+        #     for (var_name, var_value) in zip(node_params, func_args):
+        #         func_vars[var_name.dict['name']] = var_value
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
