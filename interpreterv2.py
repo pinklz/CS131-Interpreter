@@ -142,39 +142,39 @@ class Interpreter(InterpreterBase):
             )
 
 
-        func_arg_values = []
+        # func_arg_values = []
 
-            # if variable - check calling_func_args
-            # if op, call run_operation
-        for arg in func_args:
-            # If it is already a value, add that value
-            if arg.elem_type in ['string', 'int', 'bool']:
-                func_arg_values.append( self.get_value (arg) )
-            elif arg.elem_type == 'var':
-                # Check variable is defining within calling function + get value if so
-                func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
+        #     # if variable - check calling_func_args
+        #     # if op, call run_operation
+        # for arg in func_args:
+        #     # If it is already a value, add that value
+        #     if arg.elem_type in ['string', 'int', 'bool']:
+        #         func_arg_values.append( self.get_value (arg) )
+        #     elif arg.elem_type == 'var':
+        #         # Check variable is defining within calling function + get value if so
+        #         func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
             
-            # Passed in EXPRESION
-                # Overloaded operation
-            elif arg.elem_type in self.OVERLOADED_OPERATIONS:
-                func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
-                # Integer operation
-            elif arg.elem_type in self.INT_OPERATIONS:
-                func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
-                # Boolean operation
-            elif arg.elem_type in self.BOOL_OPERATIONS:
-                func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
-                # Equality comparison
-            elif arg.elem_type in self.EQUALITY_COMPARISONS:
-                func_arg_values.append( self.check_equality (arg, calling_func_vars) )
-                # Integer comparison
-            elif arg.elem_type in self.INTEGER_COMPARISONS:
-                func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
-            elif arg.elem_type == 'nil':
-                func_arg_values.append( arg )
-            else:
-                print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
-                # TODO: if error, likely is in missing a case here
+        #     # Passed in EXPRESION
+        #         # Overloaded operation
+        #     elif arg.elem_type in self.OVERLOADED_OPERATIONS:
+        #         func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
+        #         # Integer operation
+        #     elif arg.elem_type in self.INT_OPERATIONS:
+        #         func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
+        #         # Boolean operation
+        #     elif arg.elem_type in self.BOOL_OPERATIONS:
+        #         func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
+        #         # Equality comparison
+        #     elif arg.elem_type in self.EQUALITY_COMPARISONS:
+        #         func_arg_values.append( self.check_equality (arg, calling_func_vars) )
+        #         # Integer comparison
+        #     elif arg.elem_type in self.INTEGER_COMPARISONS:
+        #         func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
+        #     elif arg.elem_type == 'nil':
+        #         func_arg_values.append( arg )
+        #     else:
+        #         print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
+        #         # TODO: if error, likely is in missing a case here
 
 
         return self.run_func( func_to_run , func_arg_values )
