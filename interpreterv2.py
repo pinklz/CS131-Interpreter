@@ -174,6 +174,8 @@ class Interpreter(InterpreterBase):
                 func_arg_values.append( arg )
             elif arg.elem_type == 'fcall':
                 func_arg_values.append( self.run_fcall(arg, calling_func_vars) )
+            else:
+                func_arg_values.append(arg)
                 # print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
         #         # TODO: if error, likely is in missing a case here
 
