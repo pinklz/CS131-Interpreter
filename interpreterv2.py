@@ -655,95 +655,6 @@ class Interpreter(InterpreterBase):
         if node_type == '/':
             return self.run_int_operation(op1, func_vars) // self.run_int_operation(op2, func_vars)
 
-        
-    def run_int_operation_old(self, node, func_vars):
-        if (self.trace_output == True):
-            print("INT OPERATION: ", node.elem_type)
-
-        if (node is None):
-            super().error(
-                ErrorType.TYPE_ERROR,
-                f"Attemped to use type 'None' in boolean operation"
-            )
-
-        node_type = node.elem_type
-
-         # BASE: if operand is a VARIABLE --> return that variable's value
-        if node_type == 'var':
-            val = self.get_variable_value(node, func_vars)
-
-            # Check that variable type isn't a string
-            if (isinstance( val,  str)):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Incompatible types for arithmetic operation, attempted to use string (via existing variable {node.dict['name']} value)"
-                )
-            # Check if boolean
-            if (val is True) or (val is False):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Incompatible types for arithmetic operation, attempted to use boolean (via existing variable {node.dict['name']} value)"
-                )
-
-            # If it's nil, it will have an elem_type
-                # if not, this will normally throw an excpetion
-            val_type = None
-            try:
-                val_type = val.elem_type
-            except:
-                pass
-            
-            if (val_type == "nil"):
-                super().error(
-                    ErrorType.TYPE_ERROR, 
-                    f"Tried to use NIL in for arithmetic operation(via existing variable {node.dict['name']} value)"
-                )
-
-            return val
-
-        # BASE: if operand is a VALUE --> return that value
-        if node_type == 'int':
-            return self.get_value(node)
-        
-        if node_type == 'fcall':
-            if (self.trace_output == True):
-                print("EXPRESSION USES A FUNCTION CALL")
-            fcall_ret = self.run_fcall(node, func_vars)
-            if (type (fcall_ret) != int):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Function call in int operation did not return an int, return value: = { {fcall_ret} }"
-                )
-            return fcall_ret
-        
-        # If try to operate on a string --> error
-        if node_type == 'string' or node_type == 'nil':
-            super().error(
-                ErrorType.TYPE_ERROR,
-                "Incompatible types for arithmetic operation, attempted to use string or nil"
-            )
-
-        # UNARY operation (integer negation)
-        if node_type == 'neg':
-            return -( self.run_int_operation( node.dict['op1'], func_vars))
-
-        # Try operation types, recursively call on operands
-        if node_type == '+':
-            op1 = node.dict['op1']
-            op2 = node.dict['op2']
-            return self.run_int_operation(op1, func_vars) + self.run_int_operation(op2, func_vars)
-        if node_type == '-':
-            op1 = node.dict['op1']
-            op2 = node.dict['op2']
-            return self.run_int_operation(op1, func_vars) - self.run_int_operation(op2, func_vars) 
-        if node_type == '*':
-            op1 = node.dict['op1']
-            op2 = node.dict['op2']
-            return self.run_int_operation(op1, func_vars) * self.run_int_operation(op2, func_vars)   
-        if node_type == '/':
-            op1 = node.dict['op1']
-            op2 = node.dict['op2']
-            return self.run_int_operation(op1, func_vars) // self.run_int_operation(op2, func_vars)
 
     def run_string_operation(self, node, func_vars):
         if (self.trace_output == True):
@@ -795,7 +706,80 @@ class Interpreter(InterpreterBase):
 
 
     ''' ---- Calculate BOOLEAN OPERATION ---- '''
+
     def run_bool_operation(self, node, func_vars):
+        # print("\n-- INSIDE RUN BOOL OP:  node = ", node)
+
+        node_type = node.elem_type
+
+        if node_type == 'int' or node_type == 'string' or node_type == 'nil':
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use int, string, or nil constant in bool operation"
+            )
+        
+        # If already a boolean --> return
+        if node_type == 'bool':
+            return self.get_value(node)
+        
+        # If variable
+        if node_type == 'var':
+            node_value = self.get_variable_value(node, func_vars)
+
+            if node_value is not True and node_value is not False:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempted to use int, string, or nil via existing variable {node.dict['name']} in BOOL operation"
+                )
+            
+            # Return variable value
+            return node_value
+        
+        
+        # Function call
+        if node_type == 'fcall':
+            fcall_ret = self.run_fcall(node, func_vars)
+
+            if fcall_ret is not True and fcall_ret is not False:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempted to use int, string, or nil via FCALL RETURN in BOOL operation"
+                )
+
+            return fcall_ret
+        
+        # TODO: check unary op1 is also in allowable_types (and for integer ops)
+        
+        # Unary Boolean NOT
+        if node_type == '!':
+            return not (self.run_bool_operation( node.dict['op1'], func_vars))
+        
+        op1 = node.dict['op1']
+        op2 = node.dict['op2']
+        allowable_types = ['bool', 'var', 'fcall'] + self.BOOL_OPERATIONS + self.EQUALITY_COMPARISONS + self.INTEGER_COMPARISONS
+
+        # If not an allowable boolean operation
+        if op1.elem_type not in allowable_types:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Operand 1 is NOT of an allowable type for BOOL operation: op1 = {op1}"
+            )
+        if op2.elem_type not in allowable_types:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Operand 2 is NOT of an allowable type for BOOL operation: op2 = {op2}"
+            )
+
+        # Boolean operation
+        if node_type == '||':
+            # TODO: might need to manually run both sides for strict evaluation
+            return self.run_bool_operation(op1, func_vars) or self.run_bool_operation(op2, func_vars)
+        
+        if node_type == '&&':
+            # TODO: might need to manually run both sides for strict evaluation
+            return self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars)
+
+    def run_bool_operation_old(self, node, func_vars):
         if (self.trace_output == True):
             print("OPERATION: ", node.elem_type)
 
