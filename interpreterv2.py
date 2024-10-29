@@ -1,6 +1,7 @@
 from brewparse import parse_program
 from intbase import *
 from element import Element
+import copy
 
 # Custom exception class to catch return values
 class ReturnValue(Exception):
@@ -192,6 +193,8 @@ class Interpreter(InterpreterBase):
                 "Non-function node passed into run_func"
             )
 
+        func_args = copy.deepcopy(func_args)
+
         # Create dictionary to hold variables local to this function
         scope_stack = []
         func_vars = {}
@@ -216,9 +219,7 @@ class Interpreter(InterpreterBase):
                     f"Function { {func_node.dict['name']} } with { len(func_args)} parameters was not found (INSIDE RUN FUNC)"
                 )
         
-        for i in range(len(node_params)):
-            var_name = node_params[i]
-            var_value = func_args[i]
+        for var_name, var_value in zip(node_params, func_args):
             func_vars[var_name.dict['name']] = var_value
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
