@@ -586,7 +586,77 @@ class Interpreter(InterpreterBase):
     ''' ---- Evaluating Expressions / Operations ---- '''
         # Should return value of operation
         # If nested, call run_op on the nested one --> should return value of nested operation to be used in top level op
+
     def run_int_operation(self, node, func_vars):
+        # print("\n INSIDE RUN_INT_OP: ", node)
+
+        node_type = node.elem_type
+
+        if node_type == 'string' or node_type == 'bool' or node_type == 'nil':
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use string or bool constant in integer operation"
+            )
+        
+        # If int value
+        if node_type == 'int':
+            return self.get_value(node)
+        
+        # If variable
+        if node_type == 'var':
+            node_value = self.get_variable_value(node, func_vars)
+            # print("\tPAssed in variable w/ value: ", node_value)
+            if not (isinstance(node_value, int)) or node_value is True or node_value is False:
+                super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use string or bool or nil via existing variable {node.dict['name']} in integer operation"
+            )
+            
+            # otherwise, it is an integer value
+            return node_value 
+        
+        if node_type == 'fcall':
+            fcall_ret = self.run_fcall(node, func_vars)
+            # print("\tPassed in function call with return value ", fcall_ret)
+            if not (isinstance(fcall_ret, int)) or fcall_ret is True or fcall_ret is False:
+                super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use string or bool or nil via fcall in integer operation"
+            )
+                
+            return fcall_ret
+        
+        # Unary negation
+        if node_type == 'neg':
+            return -( self.run_int_operation( node.dict['op1'], func_vars))
+        
+        # Operation
+        op1 = node.dict['op1']
+        op2 = node.dict['op2']
+
+        allowable_types = ['int', 'var', 'fcall']
+        if op1.elem_type not in allowable_types and op1.elem_type not in self.INT_OPERATIONS:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Operand 1 is NOT of an allowable type for integer operation: op1 = {op1}"
+            )
+        if op2.elem_type not in allowable_types and op2.elem_type not in self.INT_OPERATIONS:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Operand 2 is NOT of an allowable type for integer operation: op2 = {op2}"
+            )
+
+        if node_type == '+':
+            return self.run_int_operation(op1, func_vars) + self.run_int_operation(op2, func_vars)
+        if node_type == '-':
+            return self.run_int_operation(op1, func_vars) - self.run_int_operation(op2, func_vars)
+        if node_type == '*':
+            return self.run_int_operation(op1, func_vars) * self.run_int_operation(op2, func_vars)
+        if node_type == '/':
+            return self.run_int_operation(op1, func_vars) // self.run_int_operation(op2, func_vars)
+
+        
+    def run_int_operation_old(self, node, func_vars):
         if (self.trace_output == True):
             print("INT OPERATION: ", node.elem_type)
 
