@@ -191,6 +191,11 @@ class Interpreter(InterpreterBase):
                 ErrorType.TYPE_ERROR,
                 "Non-function node passed into run_func"
             )
+        if (node_dict['name'] not in self.defined_functions):
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Function {node_dict['name']} was not found / defined  (IN RUN FUNC)",
+            )
 
         # Create dictionary to hold variables local to this function
         scope_stack = []
