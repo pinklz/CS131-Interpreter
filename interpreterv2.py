@@ -192,11 +192,6 @@ class Interpreter(InterpreterBase):
                 ErrorType.TYPE_ERROR,
                 "Non-function node passed into run_func"
             )
-        if (func_node.dict['name'] not in self.defined_functions):
-            super().error(
-                ErrorType.NAME_ERROR,
-                f"Function {node_dict['name']} was not found / defined  (IN RUN FUNC)",
-            )
 
         # Create dictionary to hold variables local to this function
         scope_stack = []
@@ -216,12 +211,6 @@ class Interpreter(InterpreterBase):
                     print("\t\t", arg)
 
         # Map argument values to the parameter names
-        if (len(node_params)!= len(func_args)):
-            super().error(
-                    ErrorType.NAME_ERROR, 
-                    f"Function { {func_node.dict['name']} } with { len(func_args)} parameters was not found (INSIDE RUN FUNC)"
-                )
-        
         for var_name, var_value in zip(node_params, func_args):
             func_vars[var_name.dict['name']] = var_value
 
