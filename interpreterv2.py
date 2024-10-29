@@ -625,22 +625,29 @@ class Interpreter(InterpreterBase):
             )
                 
             return fcall_ret
+
+        allowable_types = ['int', 'var', 'fcall'] + self.INT_OPERATIONS
         
         # Unary negation
         if node_type == 'neg':
+            op1 = node.dict['op1']
+            if op1.elem_type not in allowable_types:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Operand 1 is NOT of an allowable type for integer operation: op1 = {op1}"
+                )
             return -( self.run_int_operation( node.dict['op1'], func_vars))
         
         # Operation
         op1 = node.dict['op1']
         op2 = node.dict['op2']
 
-        allowable_types = ['int', 'var', 'fcall']
-        if op1.elem_type not in allowable_types and op1.elem_type not in self.INT_OPERATIONS:
+        if op1.elem_type not in allowable_types:
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Operand 1 is NOT of an allowable type for integer operation: op1 = {op1}"
             )
-        if op2.elem_type not in allowable_types and op2.elem_type not in self.INT_OPERATIONS:
+        if op2.elem_type not in allowable_types:
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Operand 2 is NOT of an allowable type for integer operation: op2 = {op2}"
@@ -748,15 +755,20 @@ class Interpreter(InterpreterBase):
 
             return fcall_ret
         
-        # TODO: check unary op1 is also in allowable_types (and for integer ops)
+        allowable_types = ['bool', 'var', 'fcall'] + self.BOOL_OPERATIONS + self.EQUALITY_COMPARISONS + self.INTEGER_COMPARISONS
         
         # Unary Boolean NOT
         if node_type == '!':
+            op1 = node.dict['op1']
+            if op1.elem_type not in allowable_types:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Operand 1 is NOT of an allowable type for BOOL operation: op1 = {op1}"
+                )
             return not (self.run_bool_operation( node.dict['op1'], func_vars))
         
         op1 = node.dict['op1']
         op2 = node.dict['op2']
-        allowable_types = ['bool', 'var', 'fcall'] + self.BOOL_OPERATIONS + self.EQUALITY_COMPARISONS + self.INTEGER_COMPARISONS
 
         # If not an allowable boolean operation
         if op1.elem_type not in allowable_types:
