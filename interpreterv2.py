@@ -215,8 +215,9 @@ class Interpreter(InterpreterBase):
                     ErrorType.NAME_ERROR, 
                     f"Function { {func_node.dict['name']} } with { len(func_args)} parameters was not found (INSIDE RUN FUNC)"
                 )
+        
         if (node_params != []):
-            for (var_name, var_value) in zip(node_params, func_args):
+            for var_name, var_value in zip(node_params, func_args):
                 func_vars[var_name.dict['name']] = var_value
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
