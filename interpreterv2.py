@@ -1,7 +1,6 @@
 from brewparse import parse_program
 from intbase import *
 from element import Element
-import copy
 
 # Custom exception class to catch return values
 class ReturnValue(Exception):
@@ -126,21 +125,7 @@ class Interpreter(InterpreterBase):
                 f"Function {func_name} was not found / defined ",
             )
 
-        # Based on the provided number of arguments in the function call
-            # Identify the correct (possibly overloaded) function definition to run
-        func_to_run = None
-        defined_funcs_found = self.defined_functions[func_name]
-        for func in defined_funcs_found:
-            args = func.dict['args']
-            if len(func_args) == len ( args ):
-                func_to_run = func
-
-        if (func_to_run == None):
-            # Wrong number of arguments for this function
-            super().error(
-                ErrorType.NAME_ERROR, 
-                f"Function { {func_name} } with { len(func_args)} parameters was not found"
-            )
+        
 
 
         func_arg_values = []
@@ -180,6 +165,21 @@ class Interpreter(InterpreterBase):
                 # print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
         #         # TODO: if error, likely is in missing a case here
 
+        # Based on the provided number of arguments in the function call
+            # Identify the correct (possibly overloaded) function definition to run
+        func_to_run = None
+        defined_funcs_found = self.defined_functions[func_name]
+        for func in defined_funcs_found:
+            args = func.dict['args']
+            if len(func_arg_values) == len ( args ):
+                func_to_run = func
+
+        if (func_to_run == None):
+            # Wrong number of arguments for this function
+            super().error(
+                ErrorType.NAME_ERROR, 
+                f"Function { {func_name} } with { len(func_args)} parameters was not found"
+            )
 
         return self.run_func( func_to_run , func_arg_values )
 
@@ -192,8 +192,6 @@ class Interpreter(InterpreterBase):
                 ErrorType.TYPE_ERROR,
                 "Non-function node passed into run_func"
             )
-
-        func_args = copy.deepcopy(func_args)
 
         # Create dictionary to hold variables local to this function
         scope_stack = []
