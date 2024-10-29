@@ -772,91 +772,14 @@ class Interpreter(InterpreterBase):
 
         # Boolean operation
         if node_type == '||':
-            # TODO: might need to manually run both sides for strict evaluation
-            return self.run_bool_operation(op1, func_vars) or self.run_bool_operation(op2, func_vars)
+            op1_value = self.run_bool_operation(op1, func_vars)
+            op2_value = self.run_bool_operation(op2, func_vars)
+            return op1_value or op2_value
         
         if node_type == '&&':
-            # TODO: might need to manually run both sides for strict evaluation
-            return self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars)
-
-    def run_bool_operation_old(self, node, func_vars):
-        if (self.trace_output == True):
-            print("OPERATION: ", node.elem_type)
-
-        if (node is True):
-            return True 
-        if (node is False):
-            return False
-        
-        if (node is None):
-            super().error(
-                ErrorType.TYPE_ERROR,
-                f"Attemped to use type 'None' in boolean operation"
-            )
-
-        node_type = node.elem_type
-
-         # BASE: if operand is a VARIABLE --> return that variable's value
-        if node_type == 'var':
-            val = self.get_variable_value(node, func_vars)
-
-            # CHECK: this should check for strings and integers, and even exlude 0 and 1
-            if ( val is not True) and ( val is not False):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Incompatible types for BOOLEAN operation, attempted to use string (via existing variable {node.dict['name']} value)"
-                )
-            return val
-        
-        if node_type == 'string' or node_type == 'int' or node_type == 'nil':
-            super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Incompatible types for BOOLEAN operation, attempted to use string, integer, or nil constant value)"
-                )
-            
-        if node_type == 'bool':
-            return self.get_value(node)
-        
-        # Function call
-        if node_type == 'fcall':
-            if (self.trace_output == True):
-                print("EXPRESSION USES A FUNCTION CALL")
-            # Calls FCALL
-            fcall_ret = self.run_fcall(node, func_vars)
-            if (fcall_ret is not True) and (fcall_ret is not False):
-                # returned a non-boolean value
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Function call in boolean operation did not return a bool, return value = {{fcall_ret}}"
-                )
-            return fcall_ret
-            
-        # Unary Boolean NOT
-        if node_type == '!':
-            return not (self.run_bool_operation( node.dict['op1'], func_vars))
-        
-        # Boolean OR
-        if node_type == '||':
-            op1 = node.dict['op1']
-            op2 = node.dict['op2']
-
-            # Get actual value
-            op1_value = self.eval_op(op1, func_vars)
-            op2_value = self.eval_op(op2, func_vars)
-            
-            return ( self.run_bool_operation(op1_value, func_vars) or self.run_bool_operation(op2_value, func_vars) )
-        
-        # Boolean AND
-        if node_type == '&&':
-            op1 = node.dict['op1']
-            op2 = node.dict['op2']
-
-            # Get actual value
-            op1_value = self.eval_op(op1, func_vars)
-            op2_value = self.eval_op(op2, func_vars)
-
-            return ( self.run_bool_operation(op1_value, func_vars) and self.run_bool_operation(op2_value, func_vars) )
-
+            op1_value = self.run_bool_operation(op1, func_vars)
+            op2_value = self.run_bool_operation(op2, func_vars)
+            return op1_value and op2_value
 
 
     ''' ---- Comparison Operations ---- '''
