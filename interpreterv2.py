@@ -210,9 +210,14 @@ class Interpreter(InterpreterBase):
                     print("\t\t", arg)
 
         # Map argument values to the parameter names
-        # if (node_params != []):
-        #     for (var_name, var_value) in zip(node_params, func_args):
-        #         func_vars[var_name.dict['name']] = var_value
+        if (len(node_params)!= len(func_args)):
+            super().error(
+                    ErrorType.NAME_ERROR, 
+                    f"Function { {func_node.dict['name']} } with { len(func_args)} parameters was not found (INSIDE RUN FUNC)"
+                )
+        if (node_params != []):
+            for (var_name, var_value) in zip(node_params, func_args):
+                func_vars[var_name.dict['name']] = var_value
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
@@ -298,6 +303,9 @@ class Interpreter(InterpreterBase):
                     # If returning result of INTEGER COMPARISON
                     elif (return_exp_type in self.INTEGER_COMPARISONS):
                         return_val = self.integer_compare( return_expression, func_vars )
+                    
+                    elif (return_exp_type == 'fcall'):
+                        return_val = self.run_fcall( return_expression, func_vars )
 
                     if (return_val == None):  
                         print("ERR: no return value set")
