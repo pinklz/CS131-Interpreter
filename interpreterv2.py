@@ -216,9 +216,8 @@ class Interpreter(InterpreterBase):
                     f"Function { {func_node.dict['name']} } with { len(func_args)} parameters was not found (INSIDE RUN FUNC)"
                 )
         
-        # if (node_params != []):
-        #     for var_name, var_value in zip(node_params, func_args):
-        #         func_vars[var_name.dict['name']] = var_value
+        for var_name, var_value in zip(node_params, func_args):
+            func_vars[var_name.dict['name']] = var_value
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
