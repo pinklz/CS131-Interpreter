@@ -344,8 +344,6 @@ class Interpreter(InterpreterBase):
         node_dict = node.dict
         var_name = node_dict['name']
 
-        # Check that variable has been declared
-        # self.get_variable_value(node, scope_stack)
 
         scope_to_update = None
 
@@ -361,7 +359,7 @@ class Interpreter(InterpreterBase):
         if scope_to_update == None:
             super().error(
                 ErrorType.NAME_ERROR,
-                f"Variable { {var_name} }not found in any scope"
+                f"Variable { {var_name} } not found in any scope"
             )
 
 
@@ -508,7 +506,6 @@ class Interpreter(InterpreterBase):
                     self.run_statement( statement_node, scope_stack)
 
         # Pop off new scope's variables
-        # TODO: also need to pop off if return early
             # yup pop off
         scope_stack.pop()
         
@@ -516,9 +513,6 @@ class Interpreter(InterpreterBase):
     def run_for_loop(self, node, scope_stack):
         if self.trace_output:
             print("** Inside RUN FOR LOOP\tNode: ", node)
-
-        # print("\n-- Inside RUN_FOR_LOOP\tnode: ", node)
-        # print("\tPassed in scope stack: ", scope_stack)
 
         initialize = node.dict['init']
         condition = node.dict['condition']
@@ -543,7 +537,6 @@ class Interpreter(InterpreterBase):
                 self.run_statement( statement_node , scope_stack)
 
             # Pop off new scope's variables when done running statements
-            # TODO: pop off when return early
             scope_stack.pop()
 
             # Update counter variable value
@@ -589,11 +582,8 @@ class Interpreter(InterpreterBase):
     
     ''' ---- Evaluating Expressions / Operations ---- '''
         # Should return value of operation
-        # If nested, call run_op on the nested one --> should return value of nested operation to be used in top level op
 
     def run_int_operation(self, node, func_vars):
-        # print("\n INSIDE RUN_INT_OP: ", node)
-
         node_type = node.elem_type
 
         if node_type == 'string' or node_type == 'bool' or node_type == 'nil':
@@ -719,7 +709,6 @@ class Interpreter(InterpreterBase):
     ''' ---- Calculate BOOLEAN OPERATION ---- '''
 
     def run_bool_operation(self, node, func_vars):
-        # print("\n-- INSIDE RUN BOOL OP:  node = ", node)
 
         node_type = node.elem_type
 
@@ -841,10 +830,6 @@ class Interpreter(InterpreterBase):
         op1_value = self.eval_op(op1, func_vars)
         op2_value = self.eval_op(op2, func_vars)
 
-
-        # print(" -- In CHECK_EQUALITY: \tOp1 value: ", op1_value, "\tOp2 value: ", op2_value)
-        # print("\t\tTypes: ", type (op1_value), type(op2_value))
-
         same = None
 
 
@@ -952,7 +937,6 @@ class Interpreter(InterpreterBase):
             user_input = super().get_input()
 
         return int(user_input)
-        # CHECK - may need to check in future versions before converting to integer
 
     ''' ---- INPUTIS function ---- '''
     def inputs(self, prompt=[]):
