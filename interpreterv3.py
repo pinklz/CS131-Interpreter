@@ -313,6 +313,16 @@ class Interpreter(InterpreterBase):
                     f"Unrecognized statement of type {node_type}"
                 )
 
+    def default_values(self, type):
+        if (type == 'bool'):
+            return False
+        if (type == 'string'):
+            return ""
+        if (type == 'int'):
+            return 0
+
+        # TODO: if type is struct, return NIL
+
 
     ''' ---- Running Statement Types ---- '''
     # VARDEF
@@ -320,6 +330,10 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("\tInside RUN_VARDEF")
         var_name = node.dict['name']
+        var_type = node.dict['var_type']
+
+        # print("\n-- INSIDE VAR DEF\tNode: ", node)
+
 
         # Retrieves top-most scope (within inner-most block)
         latest_scope = scope_stack[-1]
@@ -331,8 +345,15 @@ class Interpreter(InterpreterBase):
                 f"Variable {var_name} defined more than once"
             )
 
+        var_dict = {}
+        var_dict['type'] = var_type
+        var_dict['val'] = self.default_values(var_type)
+
+        latest_scope[var_name] = var_dict
+        # print("\tLATEST SCOPE: ", latest_scope)
+
         # Add new variable to func_vars           Initial value: None
-        latest_scope[var_name] = "DIS IS THE INITIAL VARIABLE VALUE"
+        # latest_scope[var_name] = "DIS IS THE INITIAL VARIABLE VALUE"
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", latest_scope)
 
