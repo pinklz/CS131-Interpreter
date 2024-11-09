@@ -703,8 +703,6 @@ class Interpreter(InterpreterBase):
             return self.run_fcall(node_expression, scope_stack)
         
         # This function handles type checking - if the return value is not an integer, throw error
-            # TODO: for self.bool_types, allow the return value and operatnds to be an integer and coerce
-
         else:
             super().error(
                 ErrorType.TYPE_ERROR,
@@ -784,7 +782,13 @@ class Interpreter(InterpreterBase):
             return other_var_val
         
         elif (node_type in self.OVERLOADED_OPERATIONS):
-            return self.overloaded_operator(node_expression, scope_stack)
+            return_val = self.overloaded_operator(node_expression, scope_stack)
+            if (type(return_val) != str):
+                super().error(
+                ErrorType.TYPE_ERROR,
+                f"INSIDE STRING_TYPES: Cannot perform non-string operation { {node_type} } and return STRING value"
+            )
+            return return_val
         
         # Function call
         elif (node_type == 'fcall'):
@@ -818,7 +822,10 @@ class Interpreter(InterpreterBase):
         # If variable
         if node_type == 'var':
             node_value = self.get_variable_value(node, func_vars)
-            # print("\tPAssed in variable w/ value: ", node_value)
+
+            # NEW: below line
+            node_value = node_value['val']
+            # print("\tPassed in variable w/ value: ", node_value)
             if not (isinstance(node_value, int)) or node_value is True or node_value is False:
                 super().error(
                 ErrorType.TYPE_ERROR,
@@ -1199,7 +1206,7 @@ class Interpreter(InterpreterBase):
                 elif val is False:
                     string_to_output += "false"
                 else:
-                    string_to_output += str (val)
+                    string_to_output += str (val['val'])
 
             elif (node_type in self.OVERLOADED_OPERATIONS):
                 # If BOOLS in overloaded operatos --> need to add the True False check
