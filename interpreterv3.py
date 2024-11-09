@@ -340,7 +340,7 @@ class Interpreter(InterpreterBase):
         var_name = node.dict['name']
         var_type = node.dict['var_type']
 
-        print("\n-- INSIDE VAR DEF\tNode: ", node)
+        # print("\n-- INSIDE VAR DEF\tNode: ", node)
 
 
         # Retrieves top-most scope (within inner-most block)
@@ -355,13 +355,20 @@ class Interpreter(InterpreterBase):
 
         var_dict = {}
         var_dict['type'] = var_type
+
+        # If unrecognized type in definition --> type error
+        if (var_type not in ['int', 'bool', 'string']+ list(self.defined_structs.keys())):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Unrecognized type for variable definition: { {var_type} }"
+            )
+        
+        # Add new variable to func_vars           Initial value: Default value, None if no default set (used for my checking)
         var_dict['val'] = self.default_values(var_type)
 
         latest_scope[var_name] = var_dict
         # print("\tLATEST SCOPE: ", latest_scope)
 
-        # Add new variable to func_vars           Initial value: None
-        # latest_scope[var_name] = "DIS IS THE INITIAL VARIABLE VALUE"
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", latest_scope)
 
@@ -392,7 +399,7 @@ class Interpreter(InterpreterBase):
             )
 
         var_type = scope_to_update[var_name]['type']
-        print("\n----INSIDE RUN ASSIGN\n\tWant to assign to type: ", var_type)
+        # print("\n----INSIDE RUN ASSIGN\n\tWant to assign to type: ", var_type)
 
         ''' TODO
             Have separate functions for each types, w/ allowable operations
