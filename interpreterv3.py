@@ -895,6 +895,8 @@ class Interpreter(InterpreterBase):
         if node_type == 'var':
             val = self.get_variable_value(node, func_vars)
 
+            val = val['val']
+
             # Check if INT or BOOL
             if (isinstance( val , int)):
                 super().error(
@@ -951,6 +953,8 @@ class Interpreter(InterpreterBase):
         # If variable
         if node_type == 'var':
             node_value = self.get_variable_value(node, func_vars)
+
+            node_value = node_value['val']
 
             if node_value is not True and node_value is not False:
                 super().error(
