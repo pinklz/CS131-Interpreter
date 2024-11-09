@@ -422,12 +422,31 @@ class Interpreter(InterpreterBase):
         node_type = node_expression.elem_type
         # If string, int, or boolean value
         if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
-            scope_to_update[var_name] = self.get_value(node_expression)
+            # Check that type matches
+            if (node_type != var_type):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign type { { node_type} } to variable \"{var_name}\" of type { {var_type} }"
+                )
+            scope_to_update[var_name]['val'] = self.get_value(node_expression)
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
         # # If another variable
         elif (node_type == 'var'):
+            other_var_val = self.get_variable_value(node_expression, scope_stack)
+            other_var_type = other_var_val['type']
+
+            # TODO: different for structs, need to use the same object ref, not a copy
+            
+            # If trying to assign a variable of a different type --> type error
+            if (other_var_type != var_type):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign type of variable  { { other_var_type} } of variable \"{node_expression.dict['name']}\" to variable \"{var_name}\" of type { {var_type} }"
+                )
+            
+            # Otherwise, update w/ new variable value       ( copy for primitives )
             scope_to_update[var_name] = self.get_variable_value(node_expression, scope_stack)
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
@@ -470,6 +489,11 @@ class Interpreter(InterpreterBase):
         
         # Nil value
         elif (node_type == 'nil'):
+            if (var_type not in self.defined_structs):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign non-struct variable \"{var_name}\" to NIL value"
+                )
             scope_to_update[var_name] = Element("nil")
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
@@ -971,6 +995,7 @@ class Interpreter(InterpreterBase):
         for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the value you want to return
             if var_name in scope:
+                # print("\n_________________________________\n--IN GET VARIABLE VALUE:\tReturning = ", scope[var_name])
                 return scope[var_name]
         
         # If not found in any scope, error
