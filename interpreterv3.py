@@ -420,6 +420,7 @@ class Interpreter(InterpreterBase):
         # Calculate expression
         node_expression = node_dict['expression']
         node_type = node_expression.elem_type
+
         # If string, int, or boolean value
         if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
             # Check that type matches
@@ -447,43 +448,56 @@ class Interpreter(InterpreterBase):
                 )
             
             # Otherwise, update w/ new variable value       ( copy for primitives )
-            scope_to_update[var_name] = self.get_variable_value(node_expression, scope_stack)
+            scope_to_update[var_name]['val'] = other_var_val
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
+
+        # If not another var or a constant, check all allowable operations for this type
+        elif (var_type == 'int'):
+            scope_to_update[var_name]['val'] = self.int_types(node_expression, scope_stack)
+            # print("\t\tUpdated Scope stack: ", scope_stack)
+
+        elif (var_type == 'bool'):
+            scope_to_update[var_name]['val'] = self.bool_types(node_expression, scope_stack)
+            # print("\t\tUpdated Scope stack: ", scope_stack)
+
+        elif (var_type == 'string'):
+            scope_to_update[var_name]['val'] = self.string_types(node_expression, scope_stack)
+            # print("\t\tUpdated Scope stack: ", scope_stack)
 
         # Using an OVERLOADED operator
-        elif (node_type in self.OVERLOADED_OPERATIONS):
-            scope_to_update[var_name] = self.overloaded_operator(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
+        # elif (node_type in self.OVERLOADED_OPERATIONS):
+        #     scope_to_update[var_name] = self.overloaded_operator(node_expression, scope_stack)
+        #     if (self.trace_output == True):
+        #         print("\t\tUpdated scope_stack: ", scope_stack)
         
-        # Integer Operation to be computed
-        elif (node_type in self.INT_OPERATIONS):
-            scope_to_update[var_name] = self.run_int_operation(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
+        # # Integer Operation to be computed
+        # elif (node_type in self.INT_OPERATIONS):
+        #     scope_to_update[var_name] = self.run_int_operation(node_expression, scope_stack)
+        #     if (self.trace_output == True):
+        #         print("\t\tUpdated scope_stack: ", scope_stack)
 
-        # Boolean Operation to be computed
-        elif (node_type in self.BOOL_OPERATIONS):
-            scope_to_update[var_name] = self.run_bool_operation(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
+        # # Boolean Operation to be computed
+        # elif (node_type in self.BOOL_OPERATIONS):
+        #     scope_to_update[var_name] = self.run_bool_operation(node_expression, scope_stack)
+        #     if (self.trace_output == True):
+        #         print("\t\tUpdated scope_stack: ", scope_stack)
 
-        # Equality comparison
-        elif (node_type in self.EQUALITY_COMPARISONS):
-            scope_to_update[var_name] = self.check_equality(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
+        # # Equality comparison
+        # elif (node_type in self.EQUALITY_COMPARISONS):
+        #     scope_to_update[var_name] = self.check_equality(node_expression, scope_stack)
+        #     if (self.trace_output == True):
+        #         print("\t\tUpdated scope_stack: ", scope_stack)
 
-        # Integer value comparison
-        elif (node_type in self.INTEGER_COMPARISONS):
-            scope_to_update[var_name] = self.integer_compare(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
+        # # Integer value comparison
+        # elif (node_type in self.INTEGER_COMPARISONS):
+        #     scope_to_update[var_name] = self.integer_compare(node_expression, scope_stack)
+        #     if (self.trace_output == True):
+        #         print("\t\tUpdated scope_stack: ", scope_stack)
 
         # Function call
         elif (node_type == 'fcall'):
-            scope_to_update[var_name] = self.run_fcall(node_expression, scope_stack)
+            scope_to_update[var_name]['val'] = self.run_fcall(node_expression, scope_stack)
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
         
@@ -494,7 +508,7 @@ class Interpreter(InterpreterBase):
                     ErrorType.TYPE_ERROR,
                     f"Cannot assign non-struct variable \"{var_name}\" to NIL value"
                 )
-            scope_to_update[var_name] = Element("nil")
+            scope_to_update[var_name]['val'] = Element("nil")
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
         else:
@@ -657,6 +671,133 @@ class Interpreter(InterpreterBase):
                     f"No {node_type} operation defined for { type(op1_value) }"
                 )
     
+    ''' ---- Operations Allowed for Specific Types ---- '''
+    def int_types(self, node_expression, scope_stack):
+        # print("\n--- INSIDE INT_TYPES\tNode = ", node_expression)
+
+        node_type = node_expression.elem_type
+        # print("Passed in node of type ", node_type)
+
+        if (node_type == 'int'):
+            return self.get_value(node_expression)
+        
+        elif (node_type == 'var'):
+            other_var_val = self.get_variable_value(node_expression, scope_stack)
+            other_var_type = other_var_val['type']
+            if (other_var_type != 'int'):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign type of variable { { other_var_type} } of variable \"{node_expression.dict['name']}\" INT variable  (Inside INT_TYPES)"
+                )
+            
+            return other_var_val
+        
+        # Integer Operation to be computed
+        elif (node_type in self.INT_OPERATIONS):
+            print("\tINTEGER OP")
+            return self.run_int_operation(node_expression, scope_stack)
+
+        # Function call
+        elif (node_type == 'fcall'):
+            # TODO: need to check types here - can maybe get the return type of the function before calling it?
+            return self.run_fcall(node_expression, scope_stack)
+        
+        # This function handles type checking - if the return value is not an integer, throw error
+            # TODO: for self.bool_types, allow the return value and operatnds to be an integer and coerce
+
+        else:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"INSIDE INT_TYPES: Cannot perform non-integer operation { {node_type} } and return int value"
+            )
+
+
+    def bool_types(self, node_expression, scope_stack):
+        # print("\n--- INSIDE BOOL_TYPES\tNode = ", node_expression)
+        
+        node_type = node_expression.elem_type
+        # print("Passed in node of type ", node_type)
+
+        if (node_type == 'bool'):
+            return self.get_value(node_expression)
+        
+        elif (node_type == 'var'):
+            other_var_val = self.get_variable_value(node_expression, scope_stack)
+            other_var_type = other_var_val['type']
+            if (other_var_type != 'bool'):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign type of variable { { other_var_type} } of variable \"{node_expression.dict['name']}\" BOOL variable  (Inside BOOL_TYPES)"
+                )
+            
+            return other_var_val
+
+        # Boolean Operation to be computed
+        elif (node_type in self.BOOL_OPERATIONS):
+            return self.run_bool_operation(node_expression, scope_stack)
+
+        # Equality comparison
+        elif (node_type in self.EQUALITY_COMPARISONS):
+            return self.check_equality(node_expression, scope_stack)
+
+        # Integer value comparison
+        elif (node_type in self.INTEGER_COMPARISONS):
+            return self.integer_compare(node_expression, scope_stack)
+
+        # Function call
+        elif (node_type == 'fcall'):
+            # TODO: need to check types here - can maybe get the return type of the function before calling it?
+            return self.run_fcall(node_expression, scope_stack)
+
+        # Integer Operation to be computed
+        # TODO: Coercion allowed here
+        elif (node_type in self.INT_OPERATIONS):
+            return_val =  self.run_int_operation(node_expression, scope_stack)
+            # print("\t******** Inside Bool Ops: called something that reutrns an INTEGER\n\tNEED TO do coercion stuff")
+
+
+        else:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"INSIDE BOOL_TYPES: Cannot perform non-boolean operation { {node_type} } and return BOOL value"
+            )
+
+
+    def string_types(self, node_expression, scope_stack):
+        # print("\n--- INSIDE STRING_TYPES\tNode = ", node_expression)
+    
+        node_type = node_expression.elem_type
+        # print("Passed in node of type ", node_type)
+
+        if (node_type == 'string'):
+            return self.get_value(node_expression)
+        
+        elif (node_type == 'var'):
+            other_var_val = self.get_variable_value(node_expression, scope_stack)
+            other_var_type = other_var_val['type']
+            if (other_var_type != 'string'):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign type of variable { { other_var_type} } of variable \"{node_expression.dict['name']}\" STRING variable  (Inside STRING_TYPES)"
+                )
+        
+            return other_var_val
+        
+        elif (node_type in self.OVERLOADED_OPERATIONS):
+            return self.overloaded_operator(node_expression, scope_stack)
+        
+        # Function call
+        elif (node_type == 'fcall'):
+            # TODO: need to check types here - can maybe get the return type of the function before calling it?
+            return self.run_fcall(node_expression, scope_stack)
+        
+        else:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"INSIDE STRING_TYPES: Cannot perform non-string operation { {node_type} } and return STRING value"
+            )
+                
+
     
     ''' ---- Evaluating Expressions / Operations ---- '''
         # Should return value of operation
