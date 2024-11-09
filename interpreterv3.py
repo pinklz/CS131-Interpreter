@@ -822,11 +822,12 @@ class Interpreter(InterpreterBase):
         # If variable
         if node_type == 'var':
             node_value = self.get_variable_value(node, func_vars)
+            return_node_type = node_value['type']
 
             # NEW: below line
             node_value = node_value['val']
             # print("\tPassed in variable w/ value: ", node_value)
-            if not (isinstance(node_value, int)) or node_value is True or node_value is False:
+            if (return_node_type != 'int'):
                 super().error(
                 ErrorType.TYPE_ERROR,
                 f"Attempted to use string or bool or nil via existing variable {node.dict['name']} in integer operation"
@@ -894,20 +895,15 @@ class Interpreter(InterpreterBase):
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
             val = self.get_variable_value(node, func_vars)
+            val_type = val['type']
 
             val = val['val']
 
             # Check if INT or BOOL
-            if (isinstance( val , int)):
+            if (val_type != 'string'):
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Incompatible types for STRING operation, attempted to use INTEGER (via existing variable {node.dict['name']} value)"
-                )
-
-            if ( val is True or val is False):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Incompatible types for STRING operation, attempted to use BOOLEAN (via existing variable {node.dict['name']} value)"
+                    f"Incompatible types for STRING operation, attempted to use INTEGER or BOOL (via existing variable {node.dict['name']} value)"
                 )
             # Otherwise, return value
             return val
@@ -953,10 +949,11 @@ class Interpreter(InterpreterBase):
         # If variable
         if node_type == 'var':
             node_value = self.get_variable_value(node, func_vars)
+            return_node_type = node_value['type']
 
             node_value = node_value['val']
 
-            if node_value is not True and node_value is not False:
+            if (return_node_type != 'bool'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Attempted to use int, string, or nil via existing variable {node.dict['name']} in BOOL operation"
