@@ -1201,12 +1201,13 @@ class Interpreter(InterpreterBase):
             elif node_type == 'var':
                 # will raise error if variable hasn't been defined
                 val = self.get_variable_value(element, func_vars)
+                val = val['val']
                 if val is True:
                     string_to_output += "true"
                 elif val is False:
                     string_to_output += "false"
                 else:
-                    string_to_output += str (val['val'])
+                    string_to_output += str (val)
 
             elif (node_type in self.OVERLOADED_OPERATIONS):
                 # If BOOLS in overloaded operatos --> need to add the True False check
