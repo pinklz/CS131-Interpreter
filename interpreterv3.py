@@ -4,10 +4,9 @@ from element import Element
 
 # Custom exception class to catch return values
 class ReturnValue(Exception):
-    def __init__(self, return_value):
+    def __init__(self, return_value, return_type):
         self.return_value = return_value
-    def get_ret_value(self):
-        return self.return_value
+        self.return_type = return_type
 
 
 class Interpreter(InterpreterBase):
@@ -205,43 +204,6 @@ class Interpreter(InterpreterBase):
                 func_arg_values.append(arg)
 
 
-            # if variable - check calling_func_args
-            # if op, call run_operation
-        # for arg in func_args:
-        #     print("PROVIDED ARG: ", arg)
-        #     # If it is already a value, add that value
-        #     if arg.elem_type in ['string', 'int', 'bool']:
-        #         func_arg_values.append( self.get_value (arg) )
-        #     elif arg.elem_type == 'var':
-        #         # Check variable is defining within calling function + get value if so
-        #         func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
-            
-        #     # Passed in EXPRESION
-        #         # Overloaded operation
-        #     elif arg.elem_type in self.OVERLOADED_OPERATIONS:
-        #         func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
-        #         # Integer operation
-        #     elif arg.elem_type in self.INT_OPERATIONS:
-        #         func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
-        #         # Boolean operation
-        #     elif arg.elem_type in self.BOOL_OPERATIONS:
-        #         func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
-        #         # Equality comparison
-        #     elif arg.elem_type in self.EQUALITY_COMPARISONS:
-        #         func_arg_values.append( self.check_equality (arg, calling_func_vars) )
-        #         # Integer comparison
-        #     elif arg.elem_type in self.INTEGER_COMPARISONS:
-        #         func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
-        #     elif arg.elem_type == 'nil':
-        #         func_arg_values.append( arg )
-        #     elif arg.elem_type == 'fcall':
-        #         func_arg_values.append( self.run_fcall(arg, calling_func_vars) )
-        #     else:
-        #         func_arg_values.append(arg)
-                # print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
-        #         # TODO: if error, likely is in missing a case here
-
-
         return self.run_func( func_to_run , func_arg_values )
 
 
@@ -260,8 +222,11 @@ class Interpreter(InterpreterBase):
         
         node_dict = func_node.dict
         node_params = node_dict['args']
-        if (self.trace_output == True):
+        expected_return_type = node_dict['return_type']
+        # print("----in RUN_FUNC - expected return type = ", expected_return_type)
 
+
+        if (self.trace_output == True):
             if node_params == []:
                 print("\tThis function has NO parameters")
             else:
@@ -294,6 +259,12 @@ class Interpreter(InterpreterBase):
                 while (len(scope_stack) > 1):
                     scope_stack.pop()
 
+                # print("\n--IN RUN_FUNC\tReturned value = ", rval)
+                if rval.return_type != expected_return_type:
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Returned value { {rval.return_value} } does not match expected type \"{expected_return_type}\" "
+                    )
                 return rval.return_value
 
         # If exit list of statements without reaching a return statement, return NIL
@@ -330,6 +301,7 @@ class Interpreter(InterpreterBase):
                 return_expression = statement_node.dict['expression']
 
                 return_val = None
+                return_type = None
 
                 if return_expression == None or return_expression.elem_type == "nil":
                     return_val = Element("nil")
@@ -340,38 +312,50 @@ class Interpreter(InterpreterBase):
                     # If returning a CONSTANT value
                     if (return_exp_type in ['int', 'string', 'bool']):
                         return_val = self.get_value(return_expression)
+                        return_type = return_exp_type
                     
                     # If returning a VARIABLE value
                     elif (return_exp_type == 'var'):
-                        return_val = self.get_variable_value(return_expression, func_vars)
+                        return_val_all = self.get_variable_value(return_expression, func_vars)
+                        return_val = return_val_all['val']
+                        return_type = return_val_all['type']
                     
                     # If using an OVERLOADED OPERATOR 
                     elif (return_exp_type in self.OVERLOADED_OPERATIONS):
                         return_val = self.overloaded_operator(return_expression, func_vars)
+                        if (type(return_val) == int):
+                            return_type = 'int'
+                        elif (type(return_val) == str):
+                            return_type = 'string'
                     
                     # If returning an OPERATION
                     elif (return_exp_type in self.INT_OPERATIONS):
                         return_val = self.run_int_operation( return_expression, func_vars )
+                        return_type = 'int'
                     
                     # If returning result of BOOLEAN operation
                     elif (return_exp_type in self.BOOL_OPERATIONS):
                         return_val = self.run_bool_operation( return_expression, func_vars )
+                        return_type = 'bool'
                     
                     # If returning result of EQUALITY comparison operation
                     elif (return_exp_type in self.EQUALITY_COMPARISONS):
                         return_val = self.check_equality( return_expression, func_vars )
+                        return_type = 'bool'
                     
                     # If returning result of INTEGER COMPARISON
                     elif (return_exp_type in self.INTEGER_COMPARISONS):
                         return_val = self.integer_compare( return_expression, func_vars )
+                        return_type = 'bool'
                     
                     elif (return_exp_type == 'fcall'):
                         return_val = self.run_fcall( return_expression, func_vars )
+                        # TODO: ADD RETURN TYPE
 
-                    if (return_val == None):  
-                        print("ERR: no return value set")
+                    # if (return_val == None):  
+                    #     print("ERR: no return value set")
 
-                raise ReturnValue(return_val)
+                raise ReturnValue(return_val, return_type)
 
             case _:
                 super().error(
@@ -654,6 +638,9 @@ class Interpreter(InterpreterBase):
         node_type = node.elem_type
         op1 = node.dict['op1']
         op2 = node.dict['op2']
+
+        # print("\n-- In OVERLOADED OPS\tOp1 = ", op1, "\top2 = ", op2)
+
 
         # Get operator values 
         op1_value = self.eval_op(op1, func_vars)
@@ -1019,7 +1006,8 @@ class Interpreter(InterpreterBase):
 
             # Get variable value
             if op_type == 'var':
-                return self.get_variable_value(node, func_vars)
+                ret_val = self.get_variable_value(node, func_vars)
+                return ret_val['val']
 
             # If value type
             if op_type == 'int' or op_type == 'string' or op_type == 'bool':
@@ -1042,6 +1030,9 @@ class Interpreter(InterpreterBase):
             
             if op_type in self.EQUALITY_COMPARISONS:
                 return self.check_equality(node, func_vars)
+            
+            if op_type in self.INTEGER_COMPARISONS:
+                return self.integer_compare(node, func_vars)
             
 
     def check_equality(self, node, func_vars):   
