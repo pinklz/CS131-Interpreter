@@ -262,6 +262,9 @@ class Interpreter(InterpreterBase):
                     scope_stack.pop()
 
                 # print("\n--IN RUN_FUNC\tReturned value = ", rval)
+                if (expected_return_type == 'void'):
+                    return
+                
                 if rval.return_type != expected_return_type:
                     super().error(
                         ErrorType.TYPE_ERROR,
@@ -269,8 +272,7 @@ class Interpreter(InterpreterBase):
                     )
                 return rval.return_value
 
-        # If exit list of statements without reaching a return statement, return NIL
-        return Element("nil")
+        # If exit list of statements without reaching a return statement, return nothing - function is void
     
 
     ''' ---- RUN STATEMENT ---- '''
@@ -528,8 +530,8 @@ class Interpreter(InterpreterBase):
             # Check variable is defined
             val = self.get_variable_value(condition, func_vars)
 
-            if (val is True) or (val is False):
-                eval_statements = val
+            if val['type'] == 'bool':
+                eval_statements = val['val']
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -664,7 +666,7 @@ class Interpreter(InterpreterBase):
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"No {node_type} operation defined for { type(op1_value) }"
+                    f"No {node_type} operation defined for { type(op1_value) }\t(Overloaded Op function)"
                 )
     
     ''' ---- Operations Allowed for Specific Types ---- '''
@@ -684,7 +686,7 @@ class Interpreter(InterpreterBase):
                     f"Cannot assign type of variable { { other_var_type} } of variable \"{node_expression.dict['name']}\" INT variable  (Inside INT_TYPES)"
                 )
             
-            return other_var_val
+            return other_var_val['val']
         
         # Integer Operation to be computed
         elif (node_type in self.INT_OPERATIONS):
@@ -719,7 +721,7 @@ class Interpreter(InterpreterBase):
                     f"Cannot assign type of variable { { other_var_type} } of variable \"{node_expression.dict['name']}\" BOOL variable  (Inside BOOL_TYPES)"
                 )
             
-            return other_var_val
+            return other_var_val['val']
 
         # Boolean Operation to be computed
         elif (node_type in self.BOOL_OPERATIONS):
@@ -767,7 +769,7 @@ class Interpreter(InterpreterBase):
                     f"Cannot assign type of variable { { other_var_type} } of variable \"{node_expression.dict['name']}\" STRING variable  (Inside STRING_TYPES)"
                 )
         
-            return other_var_val
+            return other_var_val['val']
         
         elif (node_type in self.OVERLOADED_OPERATIONS):
             return_val = self.overloaded_operator(node_expression, scope_stack)
@@ -878,8 +880,6 @@ class Interpreter(InterpreterBase):
 
         node_type = node.elem_type
 
-        # TODO: if add more string ops, need to check for NIL
-
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
             val = self.get_variable_value(node, func_vars)
@@ -896,10 +896,10 @@ class Interpreter(InterpreterBase):
             # Otherwise, return value
             return val
         
-        if node_type == 'bool' or node_type == 'int':
+        if node_type == 'bool' or node_type == 'int' or node_type == 'nil':
             super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Incompatible types for STRING operation, attempted to use boolean or integer constant value)"
+                    f"Incompatible types for STRING operation, attempted to use boolean or integer (or nil) constant value"
                 )
             
         if node_type == 'string':
@@ -982,12 +982,12 @@ class Interpreter(InterpreterBase):
         if op1.elem_type not in allowable_types:
             super().error(
                 ErrorType.TYPE_ERROR,
-                f"Operand 1 is NOT of an allowable type for BOOL operation: op1 = {op1}"
+                f"Operand 1 is NOT of an allowable type for BOOL operation: op1 = \"{op1}\""
             )
         if op2.elem_type not in allowable_types:
             super().error(
                 ErrorType.TYPE_ERROR,
-                f"Operand 2 is NOT of an allowable type for BOOL operation: op2 = {op2}"
+                f"Operand 2 is NOT of an allowable type for BOOL operation: op2 = \"{op2}\""
             )
 
         # Boolean operation
