@@ -22,6 +22,30 @@ class Interpreter(InterpreterBase):
     INTEGER_COMPARISONS = ['<', '<=', '>', '>=']
     OVERLOADED_OPERATIONS = ['+']
     STRING_OPERATIONS = ['+']
+
+    class BrewinStruct():        
+        def __init__(self, interpreter, struct_node):
+            # Struct_node: has var_type = struct name
+                # Need to find proper struct w/ fields and initialize
+            struct_name = struct_node.dict['var_type']
+
+            # Find proper struct to initialize
+            if (struct_name not in interpreter.defined_structs):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"STRUCT \"{struct_name}\" not defined"
+                )
+            
+            struct_to_initialize = interpreter.defined_structs[struct_name]
+
+            # Create dictionary of struct field values
+            self.struct_fields = {}
+
+            for field in struct_to_initialize.dict['fields']:
+                field_name = field.dict['name']
+                field_type = field.dict['var_type']
+                self.struct_fields[field_name] = {'type':field_type, 'val':interpreter.default_values(field_type)}
+            
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -284,8 +308,6 @@ class Interpreter(InterpreterBase):
 
         return_val = self.default_values(expected_return_type)
         return ReturnValue(return_val, expected_return_type)
-        # TODO: default return values if non-void function
-        # If exit list of statements without reaching a return statement, return nothing - function is void
     
 
     ''' ---- RUN STATEMENT ---- '''
@@ -527,6 +549,9 @@ class Interpreter(InterpreterBase):
             scope_to_update[var_name]['val'] = Element("nil")
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
+        
+        elif (node_type == 'new'):
+            struct_OR = self.BrewinStruct(self, node_expression)
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
