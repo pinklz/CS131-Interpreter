@@ -21,6 +21,7 @@ class Interpreter(InterpreterBase):
     EQUALITY_COMPARISONS = ['==', '!=']
     INTEGER_COMPARISONS = ['<', '<=', '>', '>=']
     OVERLOADED_OPERATIONS = ['+']
+    STRING_OPERATIONS = ['+']
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -799,16 +800,7 @@ class Interpreter(InterpreterBase):
         
             return other_var_val['val']
         
-        elif (node_type in self.OVERLOADED_OPERATIONS):
-            return_val = self.overloaded_operator(node_expression, scope_stack)
-            if (type(return_val) != str):
-                super().error(
-                ErrorType.TYPE_ERROR,
-                f"INSIDE STRING_TYPES: Cannot perform non-string operation { {node_type} } and return STRING value"
-            )
-            return return_val
-        
-        # Function call
+                # Function call
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
             if (fcall_ret['type'] != 'string'):
@@ -817,6 +809,17 @@ class Interpreter(InterpreterBase):
                     f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in STRING_TYPES"
                 )
             return fcall_ret['val']
+        
+        elif (node_type in self.STRING_OPERATIONS):
+            return self.run_string_operation(node_expression, scope_stack)
+        # elif (node_type in self.OVERLOADED_OPERATIONS):
+        #     return_val = self.overloaded_operator(node_expression, scope_stack)
+        #     if (type(return_val) != str):
+        #         super().error(
+        #         ErrorType.TYPE_ERROR,
+        #         f"INSIDE STRING_TYPES: Cannot perform non-string operation { {node_type} } and return STRING value"
+        #     )
+        #     return return_val
         
         else:
             super().error(
@@ -940,7 +943,7 @@ class Interpreter(InterpreterBase):
         
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
-            # Check function returned an integer
+            # Check function returned a string
             if (fcall_ret['type'] != 'string'):
                 super().error(
                     ErrorType.TYPE_ERROR,
