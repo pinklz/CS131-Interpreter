@@ -187,6 +187,15 @@ class Interpreter(InterpreterBase):
                 # TODO (structs) - not a copy, an object reference
                 func_arg_values.append( other_var_val )
 
+            elif (arg_type == 'fcall'):
+                fcall_ret = self.run_fcall( arg, calling_func_vars)
+                if (fcall_ret['type'] != param_type):
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign type { { fcall_ret['type'] } } to PARAMETER \"{param.dict['name']}\" of type { {param_type} } via FUNCTION CALL RETURN VALUE"
+                    )
+                func_arg_values.append( fcall_ret['val'] )
+
             
             elif (param_type == 'int'):
                 func_arg_values.append( self.int_types(arg, calling_func_vars) )
@@ -198,15 +207,15 @@ class Interpreter(InterpreterBase):
             elif(arg_type == 'nil'):
                 func_arg_values.append(arg)
 
-            # TODO: add fcall type checks
-            elif (arg_type == 'fcall'):
-                func_arg_values.append( self.run_fcall( arg, calling_func_vars) )
             else:
                 # print("\n**** Out of argument options to check (just appending whole arg) \n")
                 func_arg_values.append(arg)
 
 
-        return self.run_func( func_to_run , func_arg_values )
+        function_ret_val = self.run_func( func_to_run , func_arg_values )
+        if (function_ret_val == None):
+            return None
+        return {'val': function_ret_val.return_value, 'type':function_ret_val.return_type}
 
 
     ''' ---- RUN FUNCTION ---- '''
@@ -270,8 +279,9 @@ class Interpreter(InterpreterBase):
                         ErrorType.TYPE_ERROR,
                         f"Returned value { {rval.return_value} } does not match expected type \"{expected_return_type}\" "
                     )
-                return rval.return_value
+                return rval
 
+        # TODO: default return values if non-void function
         # If exit list of statements without reaching a return statement, return nothing - function is void
     
 
@@ -353,8 +363,9 @@ class Interpreter(InterpreterBase):
                         return_type = 'bool'
                     
                     elif (return_exp_type == 'fcall'):
-                        return_val = self.run_fcall( return_expression, func_vars )
-                        # TODO: ADD RETURN TYPE
+                        return_val_fcall = self.run_fcall( return_expression, func_vars )
+                        return_val = return_val_fcall['val']
+                        return_type = return_val_fcall['type']
 
                     # if (return_val == None):  
                     #     print("ERR: no return value set")
@@ -478,6 +489,19 @@ class Interpreter(InterpreterBase):
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
+        # Function call
+        elif (node_type == 'fcall'):
+            fcall_ret = self.run_fcall(node_expression, scope_stack)
+            if (fcall_ret['type'] != var_type):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign fcall return value of type  { { fcall_ret['val']} } to variable \"{var_name}\" of type { {var_type} }"
+                )
+
+            scope_to_update[var_name]['val'] = fcall_ret['val']
+            if (self.trace_output == True):
+                print("\t\tUpdated scope_stack: ", scope_stack)
+
         # TODO: 'new' keyword to create new structs
 
         # If not another var or a constant, check all allowable operations for this type
@@ -489,12 +513,6 @@ class Interpreter(InterpreterBase):
 
         elif (var_type == 'string'):
             scope_to_update[var_name]['val'] = self.string_types(node_expression, scope_stack)
-
-        # Function call
-        elif (node_type == 'fcall'):
-            scope_to_update[var_name]['val'] = self.run_fcall(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
         
         # Nil value
         elif (node_type == 'nil'):
@@ -541,12 +559,12 @@ class Interpreter(InterpreterBase):
         # If fcall
         elif (condition.elem_type == 'fcall'):
             fcall_return = self.run_fcall(condition, func_vars)
-            if fcall_return is True or fcall_return is False:
-                eval_statements = fcall_return
+            if (fcall_return['type'] == 'bool'):
+                eval_statements = fcall_return['val']
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Cannot evaluate STRING or INT (or nil?) in 'if' statement condition, attempted via fcall to {condition.dict['name']}"
+                    f"Cannot evaluate NON-BOOL in 'if' statement condition, attempted via fcall to \" {condition.dict['name']} \""
                 )
 
         elif (condition.elem_type in self.EQUALITY_COMPARISONS):
@@ -694,8 +712,13 @@ class Interpreter(InterpreterBase):
 
         # Function call
         elif (node_type == 'fcall'):
-            # TODO: need to check types here - can maybe get the return type of the function before calling it?
-            return self.run_fcall(node_expression, scope_stack)
+            fcall_ret = self.run_fcall(node_expression, scope_stack)
+            if (fcall_ret['type'] != 'int'):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in INT_TYPES"
+                )
+            return fcall_ret['val']
         
         # This function handles type checking - if the return value is not an integer, throw error
         else:
@@ -737,8 +760,13 @@ class Interpreter(InterpreterBase):
 
         # Function call
         elif (node_type == 'fcall'):
-            # TODO: need to check types here - can maybe get the return type of the function before calling it?
-            return self.run_fcall(node_expression, scope_stack)
+            fcall_ret = self.run_fcall(node_expression, scope_stack)
+            if (fcall_ret['type'] != 'bool'):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in BOOL_TYPES"
+                )
+            return fcall_ret['val']
 
         # Integer Operation to be computed
         # TODO: Coercion allowed here
@@ -782,8 +810,13 @@ class Interpreter(InterpreterBase):
         
         # Function call
         elif (node_type == 'fcall'):
-            # TODO: need to check types here - can maybe get the return type of the function before calling it?
-            return self.run_fcall(node_expression, scope_stack)
+            fcall_ret = self.run_fcall(node_expression, scope_stack)
+            if (fcall_ret['type'] != 'string'):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in STRING_TYPES"
+                )
+            return fcall_ret['val']
         
         else:
             super().error(
@@ -828,14 +861,14 @@ class Interpreter(InterpreterBase):
         
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
-            # print("\tPassed in function call with return value ", fcall_ret)
-            if not (isinstance(fcall_ret, int)) or fcall_ret is True or fcall_ret is False:
+            # Check function returned an integer
+            if (fcall_ret['type'] != 'int'):
                 super().error(
-                ErrorType.TYPE_ERROR,
-                f"Attempted to use string or bool or nil via fcall in integer operation"
-            )
+                    ErrorType.TYPE_ERROR,
+                    f"Attempted to use TYPE \"{fcall_ret['type'] }\"  via fcall to \" {node.dict['name']} \" in INTEGER operation"
+                )
                 
-            return fcall_ret
+            return fcall_ret['val']
 
         allowable_types = ['int', 'var', 'fcall'] + self.INT_OPERATIONS
         
@@ -905,11 +938,16 @@ class Interpreter(InterpreterBase):
         if node_type == 'string':
             return self.get_value(node)
         
-        # Function call
         if node_type == 'fcall':
-            if (self.trace_output == True):
-                print("EXPRESSION USES A FUNCTION CALL")
-            return self.run_fcall(node, func_vars)
+            fcall_ret = self.run_fcall(node, func_vars)
+            # Check function returned an integer
+            if (fcall_ret['type'] != 'string'):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempted to use TYPE \"{fcall_ret['type'] }\"  via fcall to \" {node.dict['name']} \" in STRING operation"
+                )
+                
+            return fcall_ret['val']
 
         # String concatenation
         if node_type == '+':
@@ -954,14 +992,14 @@ class Interpreter(InterpreterBase):
         # Function call
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
-
-            if fcall_ret is not True and fcall_ret is not False:
+            # Check function returned an integer
+            if (fcall_ret['type'] != 'bool'):
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Attempted to use int, string, or nil via FCALL RETURN in BOOL operation"
+                    f"Attempted to use TYPE \"{fcall_ret['type'] }\"  via fcall to \" {node.dict['name']} \" in BOOL operation"
                 )
-
-            return fcall_ret
+                
+            return fcall_ret['val']
         
         allowable_types = ['bool', 'var', 'fcall'] + self.BOOL_OPERATIONS + self.EQUALITY_COMPARISONS + self.INTEGER_COMPARISONS
         
@@ -1016,7 +1054,9 @@ class Interpreter(InterpreterBase):
                 return self.get_value(node)
             
             if op_type == 'fcall':
-                return self.run_fcall(node, func_vars)
+                fcall_ret = self.run_fcall(node, func_vars)
+                # TODO: if decide to return dictionary here, can get type with fcall_ret['type']
+                return fcall_ret['val']
             
             if op_type == 'nil':
                 return Element("nil")
@@ -1231,6 +1271,14 @@ class Interpreter(InterpreterBase):
                     string_to_output += "false"
 
             elif node_type == 'fcall':
-                string_to_output += str(self.run_fcall(element, func_vars))
+                fcall_ret = self.run_fcall(element, func_vars)
+                fcall_ret_val = fcall_ret['val']
+                if fcall_ret['type'] == 'bool':
+                    if fcall_ret_val is True:
+                        string_to_output += "true"
+                    if fcall_ret_val is False:
+                        string_to_output += "false"
+                else:
+                    string_to_output += str(fcall_ret_val)
 
         super().output(string_to_output)
