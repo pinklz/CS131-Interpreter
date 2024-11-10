@@ -282,6 +282,8 @@ class Interpreter(InterpreterBase):
                     )
                 return rval
 
+        return_val = self.default_values(expected_return_type)
+        return ReturnValue(return_val, expected_return_type)
         # TODO: default return values if non-void function
         # If exit list of statements without reaching a return statement, return nothing - function is void
     
