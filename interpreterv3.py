@@ -125,6 +125,8 @@ class Interpreter(InterpreterBase):
         builtin = self.check_builtin_funcs(func_node, calling_func_vars)
         if builtin != None:
             return builtin
+        
+        # print("\n----- INSIDE RUN FCALL\tNode = ", func_node)
 
 
         # For all other function calls: 
@@ -150,41 +152,92 @@ class Interpreter(InterpreterBase):
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
 
-
+        function_formal_params = func_to_run.dict['args']
         func_arg_values = []
+
+        # Check that argument types match parameter type
+        param_arg_zip = zip(function_formal_params, func_args)
+
+        for param, arg in param_arg_zip:
+            param_type = param.dict['var_type']
+
+            arg_type = arg.elem_type
+
+            #  If string, int, or boolean value
+            if (arg_type == 'string' or arg_type == 'int' or arg_type == 'bool'):
+                # Check that type matches
+                if (param_type != arg_type):
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign type { { arg_type} } to parameter \"{param.dict['name']}\" of type { {param_type} }"
+                    )
+                func_arg_values.append(self.get_value(arg))
+
+            elif (arg_type == 'var'):
+                other_var_val = self.get_variable_value(arg, calling_func_vars)
+                other_var_type = other_var_val['type']
+                if (other_var_type != param_type):
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign type { { other_var_type } } to PARAMETER \"{param.dict['name']}\" of type { {param_type} }"
+                    )
+
+                # Add copy of variable value
+                # TODO (structs) - not a copy, an object reference
+                func_arg_values.append( other_var_val )
+
+            
+            elif (param_type == 'int'):
+                func_arg_values.append( self.int_types(arg, calling_func_vars) )
+            elif (param_type == 'string'):
+                func_arg_values.append( self.string_types(arg, calling_func_vars) )
+            elif (param_type == 'bool'):
+                func_arg_values.append( self.bool_types(arg, calling_func_vars) )
+
+            elif(arg_type == 'nil'):
+                func_arg_values.append(arg)
+
+            # TODO: add fcall type checks
+            elif (arg_type == 'fcall'):
+                func_arg_values.append( self.run_fcall( arg, calling_func_vars) )
+            else:
+                # print("\n**** Out of argument options to check (just appending whole arg) \n")
+                func_arg_values.append(arg)
+
 
             # if variable - check calling_func_args
             # if op, call run_operation
-        for arg in func_args:
-            # If it is already a value, add that value
-            if arg.elem_type in ['string', 'int', 'bool']:
-                func_arg_values.append( self.get_value (arg) )
-            elif arg.elem_type == 'var':
-                # Check variable is defining within calling function + get value if so
-                func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
+        # for arg in func_args:
+        #     print("PROVIDED ARG: ", arg)
+        #     # If it is already a value, add that value
+        #     if arg.elem_type in ['string', 'int', 'bool']:
+        #         func_arg_values.append( self.get_value (arg) )
+        #     elif arg.elem_type == 'var':
+        #         # Check variable is defining within calling function + get value if so
+        #         func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
             
-            # Passed in EXPRESION
-                # Overloaded operation
-            elif arg.elem_type in self.OVERLOADED_OPERATIONS:
-                func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
-                # Integer operation
-            elif arg.elem_type in self.INT_OPERATIONS:
-                func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
-                # Boolean operation
-            elif arg.elem_type in self.BOOL_OPERATIONS:
-                func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
-                # Equality comparison
-            elif arg.elem_type in self.EQUALITY_COMPARISONS:
-                func_arg_values.append( self.check_equality (arg, calling_func_vars) )
-                # Integer comparison
-            elif arg.elem_type in self.INTEGER_COMPARISONS:
-                func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
-            elif arg.elem_type == 'nil':
-                func_arg_values.append( arg )
-            elif arg.elem_type == 'fcall':
-                func_arg_values.append( self.run_fcall(arg, calling_func_vars) )
-            else:
-                func_arg_values.append(arg)
+        #     # Passed in EXPRESION
+        #         # Overloaded operation
+        #     elif arg.elem_type in self.OVERLOADED_OPERATIONS:
+        #         func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
+        #         # Integer operation
+        #     elif arg.elem_type in self.INT_OPERATIONS:
+        #         func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
+        #         # Boolean operation
+        #     elif arg.elem_type in self.BOOL_OPERATIONS:
+        #         func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
+        #         # Equality comparison
+        #     elif arg.elem_type in self.EQUALITY_COMPARISONS:
+        #         func_arg_values.append( self.check_equality (arg, calling_func_vars) )
+        #         # Integer comparison
+        #     elif arg.elem_type in self.INTEGER_COMPARISONS:
+        #         func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
+        #     elif arg.elem_type == 'nil':
+        #         func_arg_values.append( arg )
+        #     elif arg.elem_type == 'fcall':
+        #         func_arg_values.append( self.run_fcall(arg, calling_func_vars) )
+        #     else:
+        #         func_arg_values.append(arg)
                 # print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
         #         # TODO: if error, likely is in missing a case here
 
@@ -208,8 +261,6 @@ class Interpreter(InterpreterBase):
         node_dict = func_node.dict
         node_params = node_dict['args']
         if (self.trace_output == True):
-            print("--------------------------------------------------------")
-            print("INSIDE RUN_FUNC: Currently running function: ", node_dict['name'])
 
             if node_params == []:
                 print("\tThis function has NO parameters")
@@ -219,8 +270,15 @@ class Interpreter(InterpreterBase):
                     print("\t\t", arg)
 
         # Map argument values to the parameter names
-        for var_name, var_value in zip(node_params, func_args):
-            func_vars[var_name.dict['name']] = var_value
+        for param, var_value in zip(node_params, func_args):
+            var_name = param.dict['name']
+            var_type = param.dict['var_type']
+            
+            func_vars[var_name] = {}
+            func_vars[var_name]['type'] = var_type
+            func_vars[var_name]['val'] = var_value
+
+        # print("FUNC VARS AFTER PARAM + ARG MATCHING: \n", func_vars)
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
@@ -340,8 +398,6 @@ class Interpreter(InterpreterBase):
         var_name = node.dict['name']
         var_type = node.dict['var_type']
 
-        # print("\n-- INSIDE VAR DEF\tNode: ", node)
-
 
         # Retrieves top-most scope (within inner-most block)
         latest_scope = scope_stack[-1]
@@ -367,7 +423,6 @@ class Interpreter(InterpreterBase):
         var_dict['val'] = self.default_values(var_type)
 
         latest_scope[var_name] = var_dict
-        # print("\tLATEST SCOPE: ", latest_scope)
 
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", latest_scope)
@@ -399,23 +454,6 @@ class Interpreter(InterpreterBase):
             )
 
         var_type = scope_to_update[var_name]['type']
-        # print("\n----INSIDE RUN ASSIGN\n\tWant to assign to type: ", var_type)
-
-        ''' TODO
-            Have separate functions for each types, w/ allowable operations
-            Pass in the whole node tho so that
-                inside each function, you still check the type
-                if a coersion is allowed, do it inside the function
-
-            Figure out:
-                do I want to create a new dictionary copy to operate on the coerced one for the operation
-                and keep the original dictionary fully in tact? 
-                Do I want to replace the original dictionary value + bring it back later? Simpler but might lead to problems
-        
-        
-        '''
-        
-
 
         # Calculate expression
         node_expression = node_dict['expression']
@@ -452,48 +490,17 @@ class Interpreter(InterpreterBase):
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
+        # TODO: 'new' keyword to create new structs
+
         # If not another var or a constant, check all allowable operations for this type
         elif (var_type == 'int'):
             scope_to_update[var_name]['val'] = self.int_types(node_expression, scope_stack)
-            # print("\t\tUpdated Scope stack: ", scope_stack)
 
         elif (var_type == 'bool'):
             scope_to_update[var_name]['val'] = self.bool_types(node_expression, scope_stack)
-            # print("\t\tUpdated Scope stack: ", scope_stack)
 
         elif (var_type == 'string'):
             scope_to_update[var_name]['val'] = self.string_types(node_expression, scope_stack)
-            # print("\t\tUpdated Scope stack: ", scope_stack)
-
-        # Using an OVERLOADED operator
-        # elif (node_type in self.OVERLOADED_OPERATIONS):
-        #     scope_to_update[var_name] = self.overloaded_operator(node_expression, scope_stack)
-        #     if (self.trace_output == True):
-        #         print("\t\tUpdated scope_stack: ", scope_stack)
-        
-        # # Integer Operation to be computed
-        # elif (node_type in self.INT_OPERATIONS):
-        #     scope_to_update[var_name] = self.run_int_operation(node_expression, scope_stack)
-        #     if (self.trace_output == True):
-        #         print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # # Boolean Operation to be computed
-        # elif (node_type in self.BOOL_OPERATIONS):
-        #     scope_to_update[var_name] = self.run_bool_operation(node_expression, scope_stack)
-        #     if (self.trace_output == True):
-        #         print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # # Equality comparison
-        # elif (node_type in self.EQUALITY_COMPARISONS):
-        #     scope_to_update[var_name] = self.check_equality(node_expression, scope_stack)
-        #     if (self.trace_output == True):
-        #         print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # # Integer value comparison
-        # elif (node_type in self.INTEGER_COMPARISONS):
-        #     scope_to_update[var_name] = self.integer_compare(node_expression, scope_stack)
-        #     if (self.trace_output == True):
-        #         print("\t\tUpdated scope_stack: ", scope_stack)
 
         # Function call
         elif (node_type == 'fcall'):
@@ -673,10 +680,8 @@ class Interpreter(InterpreterBase):
     
     ''' ---- Operations Allowed for Specific Types ---- '''
     def int_types(self, node_expression, scope_stack):
-        # print("\n--- INSIDE INT_TYPES\tNode = ", node_expression)
 
         node_type = node_expression.elem_type
-        # print("Passed in node of type ", node_type)
 
         if (node_type == 'int'):
             return self.get_value(node_expression)
@@ -694,7 +699,6 @@ class Interpreter(InterpreterBase):
         
         # Integer Operation to be computed
         elif (node_type in self.INT_OPERATIONS):
-            print("\tINTEGER OP")
             return self.run_int_operation(node_expression, scope_stack)
 
         # Function call
@@ -711,10 +715,8 @@ class Interpreter(InterpreterBase):
 
 
     def bool_types(self, node_expression, scope_stack):
-        # print("\n--- INSIDE BOOL_TYPES\tNode = ", node_expression)
         
         node_type = node_expression.elem_type
-        # print("Passed in node of type ", node_type)
 
         if (node_type == 'bool'):
             return self.get_value(node_expression)
@@ -751,7 +753,6 @@ class Interpreter(InterpreterBase):
         # TODO: Coercion allowed here
         elif (node_type in self.INT_OPERATIONS):
             return_val =  self.run_int_operation(node_expression, scope_stack)
-            # print("\t******** Inside Bool Ops: called something that reutrns an INTEGER\n\tNEED TO do coercion stuff")
 
 
         else:
@@ -762,10 +763,8 @@ class Interpreter(InterpreterBase):
 
 
     def string_types(self, node_expression, scope_stack):
-        # print("\n--- INSIDE STRING_TYPES\tNode = ", node_expression)
     
         node_type = node_expression.elem_type
-        # print("Passed in node of type ", node_type)
 
         if (node_type == 'string'):
             return self.get_value(node_expression)
@@ -1139,12 +1138,12 @@ class Interpreter(InterpreterBase):
     
 
     def get_variable_value(self, node, scope_stack):
+        # TODO (structs): maybe return object reference as value for struct, would make most things easier I think
         
         var_name = node.dict['name']
         for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the value you want to return
             if var_name in scope:
-                # print("\n_________________________________\n--IN GET VARIABLE VALUE:\tReturning = ", scope[var_name])
                 return scope[var_name]
         
         # If not found in any scope, error
