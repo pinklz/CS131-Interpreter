@@ -8,6 +8,8 @@ class ReturnValue(Exception):
         self.return_value = return_value
         self.return_type = return_type
 
+NO_VALUE_DEFINED = object()     # This line is from ChatGPT: wanted a way to define my own version of 'None'
+
 
 class Interpreter(InterpreterBase):
     program_vars = {}
@@ -45,7 +47,7 @@ class Interpreter(InterpreterBase):
 
         
         # Search through program functions to find the MAIN node
-        main_node = None
+        main_node = NO_VALUE_DEFINED
         for func in self.ast.dict['functions']:
             # Loop through all provided functions, add to dictionary of defined functions
             func_name = func.dict['name']
@@ -56,7 +58,7 @@ class Interpreter(InterpreterBase):
             # Identify main_node to run aftter
             if (func.dict['name'] == 'main'):
                 main_node = func
-        if (main_node == None):
+        if (main_node is NO_VALUE_DEFINED):
             super().error(
                 ErrorType.NAME_ERROR,
                 "No MAIN node found in program"
@@ -101,7 +103,7 @@ class Interpreter(InterpreterBase):
             return self.printout(scope_stack, node_dict['args'])
         ''' END OF SEPARATE HANDLING '''
 
-        return None
+        return NO_VALUE_DEFINED
 
 
     ''' ---- HANDLE fcall ---- '''
@@ -122,7 +124,7 @@ class Interpreter(InterpreterBase):
 
         # Check if Print, Inputi, or Inputs
         builtin = self.check_builtin_funcs(func_node, calling_func_vars)
-        if builtin != None:
+        if builtin is not NO_VALUE_DEFINED:
             return builtin
         
         # print("\n----- INSIDE RUN FCALL\tNode = ", func_node)
@@ -137,14 +139,14 @@ class Interpreter(InterpreterBase):
 
         # Based on the provided number of arguments in the function call
             # Identify the correct (possibly overloaded) function definition to run
-        func_to_run = None
+        func_to_run = NO_VALUE_DEFINED
         defined_funcs_found = self.defined_functions[func_name]
         for func in defined_funcs_found:
             args = func.dict['args']
             if len(func_args) == len ( args ):
                 func_to_run = func
 
-        if (func_to_run == None):
+        if (func_to_run is NO_VALUE_DEFINED):
             # Wrong number of arguments for this function
             super().error(
                 ErrorType.NAME_ERROR, 
@@ -420,7 +422,7 @@ class Interpreter(InterpreterBase):
         var_name = node_dict['name']
 
 
-        scope_to_update = None
+        scope_to_update = NO_VALUE_DEFINED
 
         # Traverse stack in reverse order
         for scope in scope_stack[::-1]:
@@ -431,7 +433,7 @@ class Interpreter(InterpreterBase):
                 break
 
         # If not found in any scope
-        if scope_to_update == None:
+        if scope_to_update is NO_VALUE_DEFINED:
             super().error(
                 ErrorType.NAME_ERROR,
                 f"Variable { {var_name} } not found in any scope"
@@ -1232,4 +1234,3 @@ class Interpreter(InterpreterBase):
                 string_to_output += str(self.run_fcall(element, func_vars))
 
         super().output(string_to_output)
-        return Element("nil")
