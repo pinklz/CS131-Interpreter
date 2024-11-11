@@ -169,8 +169,6 @@ class Interpreter(InterpreterBase):
         if builtin is not NO_VALUE_DEFINED:
             return builtin
         
-        # print("\n----- INSIDE RUN FCALL\tNode = ", func_node)
-
 
         # For all other function calls: 
         if (func_name not in self.defined_functions):
@@ -225,8 +223,7 @@ class Interpreter(InterpreterBase):
                         f"Cannot assign type { { other_var_type } } to PARAMETER \"{param.dict['name']}\" of type { {param_type} }"
                     )
 
-                # Add copy of variable value
-                # TODO (structs) - not a copy, an object reference
+                # Add copy of variable value or obj ref if struct
                 func_arg_values.append( other_var_val )
 
             elif (arg_type == 'fcall'):
@@ -291,11 +288,16 @@ class Interpreter(InterpreterBase):
         for param, var_value in zip(node_params, func_args):
             var_name = param.dict['name']
             var_type = param.dict['var_type']
-            
+
             func_vars[var_name] = {}
             func_vars[var_name]['type'] = var_type
-            func_vars[var_name]['val'] = var_value
 
+            if var_type in self.defined_structs:
+                # If it's a struct, append the actual obj ref (?) instead of the Object (?) idk I don't really understand why I need this
+                func_vars[var_name]['val'] = var_value['val']
+            else:
+                func_vars[var_name]['val'] = var_value
+            
         # print("FUNC VARS AFTER PARAM + ARG MATCHING: \n", func_vars)
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
