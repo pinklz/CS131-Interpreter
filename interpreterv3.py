@@ -57,7 +57,7 @@ class Interpreter(InterpreterBase):
                 return self.struct_fields[field]
             
         def __str__(self):
-            str_print = "Struct Type: " +  self.struct_name + "\n"
+            str_print = "\nStruct Type: " +  self.struct_name + "\n"
             for field in self.struct_fields:
                 str_print += ("\t" + field + "\t\t")
                 str_print += ("Type = " + self.struct_fields[field]['type'] + "\tValue = " + str(self.struct_fields[field]['val']) + "\n")
@@ -480,15 +480,9 @@ class Interpreter(InterpreterBase):
 
         scope_to_update = NO_VALUE_DEFINED
 
+        # If updating a struct field, refer to special struct_updating function
         if ('.' in var_name):
-            self.struct_update(node, scope_stack)
-
-            # Update the returned dictionary
-                # need to evaluate the expression somehow
-                # options 1. rewrite all the processing that's done below. 
-                # OR create 'return_val' var and update at the end? and that way if it's a struct i can use it to update the dict otherwise update the variable directly
-            # then point the scope_to_udpate[var_name] to the updated dictionary
-            
+            self.struct_update(node, scope_stack)         
             return
 
         # Traverse stack in reverse order
@@ -1287,9 +1281,6 @@ class Interpreter(InterpreterBase):
         return struct_val_dict
 
     def struct_update(self, node, scope_stack):
-        # print("\n-- STRUCT UPDATE \tNode: ", node)
-        # print("Current scope stack: ")
-        # print("\t", scope_stack)
 
         # For scope_stack updating: need actual variable name, not whole string w/ '.'
         var_access = node.dict['name']
@@ -1318,9 +1309,7 @@ class Interpreter(InterpreterBase):
         # Get the actual object dictionary to update
         temp_variable = Element("var")
         temp_variable.dict['name'] = var_access
-        variable_dict_to_update = self.struct_access(temp_variable, scope_stack)       # LEFT OFF HERE: this returns the fictionary mapping to the exact field I want to update
-                                                # Need to update the variable in scope_stack - somehow need to make sure its the SAME as the one in scope_stack
-                                                # Cause I'm a thinking now right before I leave that it's possible this is not returning the exact thing I want to update (but it might be? need to test)
+        variable_dict_to_update = self.struct_access(temp_variable, scope_stack)
 
         # Calculate expression
         node_expression = node_dict['expression']
@@ -1329,11 +1318,6 @@ class Interpreter(InterpreterBase):
         # print("VAR TYPE: ", var_type)
 
         # print("\n\tPassed in EXPRESSION: ", node_expression)
-
-        # Same as run_assign to evaluate expression
-                # Difference is in what I'm updating
-                #( should be VARIABLE_DICT_TO_UDPATE )
-                # and then at the end set it to scope_to_update[var_name]
         
         if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
             if (node_type != var_type):
@@ -1344,12 +1328,59 @@ class Interpreter(InterpreterBase):
             # Update actual dictionary entry
             variable_dict_to_update['val'] = self.get_value(node_expression)
 
-            # print("\t - - - Updated dictionary: ", variable_dict_to_update)
+
+        elif node_type == 'var':
+            # TODO: different for structs, need to use same object ref
+            other_var_val = self.get_variable_value(node_expression, scope_stack)
+            other_var_type = other_var_val['type']
+
+            # Check that this variable is of the right type
+            if (other_var_type != var_type):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign type of variable  { { other_var_type} } of variable \"{node_expression.dict['name']}\" to variable \"{var_access}\" of type { {var_type} }"
+                )
+
+            variable_dict_to_update['val'] = other_var_val['val']
+
+        elif node_type == 'fcall':
+            fcall_ret = self.run_fcall(node_expression, scope_stack)
+            if (fcall_ret['type'] != var_type):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign fcall return value of type  { { fcall_ret['val']} } to variable \"{var_name}\" of type { {var_type} }"
+                )
+            
+            variable_dict_to_update['val'] = fcall_ret['val']
+
+        # If not another var, constant, or function call - check all allowable operations for this type
+        elif (var_type == 'int'):
+            variable_dict_to_update['val'] = self.int_types(node_expression, scope_stack)
         
+        elif (var_type == 'string'):
+            variable_dict_to_update['val'] = self.string_types(node_expression, scope_stack)
+        
+        elif (var_type == 'bool'):
+            variable_dict_to_update['val'] = self.bool_types(node_expression, scope_stack)
 
+        # Nil value
+        elif (node_type == 'nil'):
+            if (var_type not in self.defined_structs):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign non-struct variable \"{var_name}\" to NIL value"
+                )
+            variable_dict_to_update['val'] = Element("nil")
 
-
-
+        elif (node_type == 'new'):
+            struct_OR = self.BrewinStruct(self, node_expression)
+            variable_dict_to_update['val'] = struct_OR
+        else:
+            super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Unrecognized expression \"{node_type}\" in variable assignment for {var_access}"
+                )
+        
 
     
     ''' ---- INPUTI function ---- '''
