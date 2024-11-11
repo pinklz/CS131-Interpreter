@@ -56,6 +56,13 @@ class Interpreter(InterpreterBase):
             else:
                 return self.struct_fields[field]
             
+        def __str__(self):
+            str_print = "Struct Type: " +  self.struct_name + "\n"
+            for field in self.struct_fields:
+                str_print += ("\t" + field + "\t\t")
+                str_print += ("Type = " + self.struct_fields[field]['type'] + "\tValue = " + str(self.struct_fields[field]['val']) + "\n")
+            return str_print
+            
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
         super().__init__(console_output, inp)   # call InterpreterBase's constructor
@@ -472,6 +479,17 @@ class Interpreter(InterpreterBase):
         # print("\n-- In VAR ASSIGN\tNode = ", node)
 
         scope_to_update = NO_VALUE_DEFINED
+
+        if ('.' in var_name):
+            self.struct_update(node, scope_stack)
+
+            # Update the returned dictionary
+                # need to evaluate the expression somehow
+                # options 1. rewrite all the processing that's done below. 
+                # OR create 'return_val' var and update at the end? and that way if it's a struct i can use it to update the dict otherwise update the variable directly
+            # then point the scope_to_udpate[var_name] to the updated dictionary
+            
+            return
 
         # Traverse stack in reverse order
         for scope in scope_stack[::-1]:
@@ -1251,6 +1269,8 @@ class Interpreter(InterpreterBase):
 
         accessing_from = struct_object_ref
 
+        struct_val_dict = {}
+
         # Loop through dot accesses
             # Left-associative: For each access, get the value stored in that field and use that for the next access
         for field_access in parts[1:]:
@@ -1263,7 +1283,70 @@ class Interpreter(InterpreterBase):
             returned_value = struct_val_dict['val']
             accessing_from = returned_value
 
+        # print("\n-- Returning from STRUCT ACCESS: ", struct_val_dict)
         return struct_val_dict
+
+    def struct_update(self, node, scope_stack):
+        # print("\n-- STRUCT UPDATE \tNode: ", node)
+        # print("Current scope stack: ")
+        # print("\t", scope_stack)
+
+        # For scope_stack updating: need actual variable name, not whole string w/ '.'
+        var_access = node.dict['name']
+        parts = var_access.split('.')
+        var_name = parts[0]
+
+        node_dict = node.dict
+
+        scope_to_update = NO_VALUE_DEFINED
+
+        # Traverse stack in reverse order
+        for scope in scope_stack[::-1]:
+            # If variable exists in this scope, this is the one you want to update
+            # ONLY EDIT TOPMOST SCOPE
+            if var_name in scope:
+                scope_to_update = scope
+                break
+
+        # If not found in any scope
+        if scope_to_update is NO_VALUE_DEFINED:
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Variable { {var_name} } not found in any scope"
+            )
+
+        # Get the actual object dictionary to update
+        temp_variable = Element("var")
+        temp_variable.dict['name'] = var_access
+        variable_dict_to_update = self.struct_access(temp_variable, scope_stack)       # LEFT OFF HERE: this returns the fictionary mapping to the exact field I want to update
+                                                # Need to update the variable in scope_stack - somehow need to make sure its the SAME as the one in scope_stack
+                                                # Cause I'm a thinking now right before I leave that it's possible this is not returning the exact thing I want to update (but it might be? need to test)
+
+        # Calculate expression
+        node_expression = node_dict['expression']
+        node_type = node_expression.elem_type
+        var_type = variable_dict_to_update['type']
+        # print("VAR TYPE: ", var_type)
+
+        # print("\n\tPassed in EXPRESSION: ", node_expression)
+
+        # Same as run_assign to evaluate expression
+                # Difference is in what I'm updating
+                #( should be VARIABLE_DICT_TO_UDPATE )
+                # and then at the end set it to scope_to_update[var_name]
+        
+        if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
+            if (node_type != var_type):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign type { { node_type} } to variable \"{var_access}\" of type { {var_type} }"
+                )
+            # Update actual dictionary entry
+            variable_dict_to_update['val'] = self.get_value(node_expression)
+
+            # print("\t - - - Updated dictionary: ", variable_dict_to_update)
+        
+
 
 
 
