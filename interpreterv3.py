@@ -25,18 +25,19 @@ class Interpreter(InterpreterBase):
 
     class BrewinStruct():        
         def __init__(self, interpreter, struct_node):
+            self.interpreter = interpreter
             # Struct_node: has var_type = struct name
                 # Need to find proper struct w/ fields and initialize
-            struct_name = struct_node.dict['var_type']
+            self.struct_name = struct_node.dict['var_type']
 
             # Find proper struct to initialize
-            if (struct_name not in interpreter.defined_structs):
-                super().error(
+            if (self.struct_name not in interpreter.defined_structs):
+                InterpreterBase.error(
                     ErrorType.TYPE_ERROR,
-                    f"STRUCT \"{struct_name}\" not defined"
+                    f"STRUCT \"{self.struct_name}\" not defined"
                 )
             
-            struct_to_initialize = interpreter.defined_structs[struct_name]
+            struct_to_initialize = interpreter.defined_structs[self.struct_name]
 
             # Create dictionary of struct field values
             self.struct_fields = {}
@@ -45,6 +46,15 @@ class Interpreter(InterpreterBase):
                 field_name = field.dict['name']
                 field_type = field.dict['var_type']
                 self.struct_fields[field_name] = {'type':field_type, 'val':interpreter.default_values(field_type)}
+            
+        def get_field(self, field):
+            if (field not in self.struct_fields):
+                InterpreterBase.error(
+                    ErrorType.NAME_ERROR,
+                    f"Field { {field} }  not defined for STRUCT \"{self.struct_name}\" "
+                )
+            else:
+                return self.struct_fields[field]
             
    
     def __init__(self, console_output=True, inp=None, trace_output=False):
@@ -459,6 +469,7 @@ class Interpreter(InterpreterBase):
         node_dict = node.dict
         var_name = node_dict['name']
 
+        # print("\n-- In VAR ASSIGN\tNode = ", node)
 
         scope_to_update = NO_VALUE_DEFINED
 
@@ -498,6 +509,7 @@ class Interpreter(InterpreterBase):
         # # If another variable
         elif (node_type == 'var'):
             other_var_val = self.get_variable_value(node_expression, scope_stack)
+            # print("RETURNED VALUE = ", other_var_val)
             other_var_type = other_var_val['type']
 
             # TODO: different for structs, need to use the same object ref, not a copy
@@ -510,7 +522,7 @@ class Interpreter(InterpreterBase):
                 )
             
             # Otherwise, update w/ new variable value       ( copy for primitives )
-            scope_to_update[var_name]['val'] = other_var_val
+            scope_to_update[var_name]['val'] = other_var_val['val']
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
@@ -527,7 +539,6 @@ class Interpreter(InterpreterBase):
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
-        # TODO: 'new' keyword to create new structs
 
         # If not another var or a constant, check all allowable operations for this type
         elif (var_type == 'int'):
@@ -552,6 +563,7 @@ class Interpreter(InterpreterBase):
         
         elif (node_type == 'new'):
             struct_OR = self.BrewinStruct(self, node_expression)
+            scope_to_update[var_name]['val'] = struct_OR
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
@@ -1204,10 +1216,16 @@ class Interpreter(InterpreterBase):
         # TODO (structs): maybe return object reference as value for struct, would make most things easier I think
         
         var_name = node.dict['name']
-        for scope in scope_stack[::-1]:
-            # If variable exists in this scope, this is the value you want to return
-            if var_name in scope:
-                return scope[var_name]
+        # Check for struct access
+        if ('.' in var_name):
+            return self.struct_access(node, scope_stack)
+
+        else:
+            # Otherwise, look at regular variable names
+            for scope in scope_stack[::-1]:
+                # If variable exists in this scope, this is the value you want to return
+                if var_name in scope:
+                    return scope[var_name]
         
         # If not found in any scope, error
         super().error(
@@ -1215,6 +1233,40 @@ class Interpreter(InterpreterBase):
                 f"Variable {var_name} has not been declared w/in function scope"
             )
         
+    ''' ---- STRUCT PROCESSING  ---- '''
+    def struct_access(self, node, scope_stack):
+        # print("\n-- STRUCT ACCESS in progress - hard hat required")
+        # print("Node passed in: ", node)
+        # print("Current scope stack ")
+        # print(scope_stack)
+
+        var_access = node.dict['name']
+        parts = var_access.split('.')
+        var_name = parts[0]
+        temp_variable = Element("var")
+        temp_variable.dict['name'] = var_name
+
+        var_value = self.get_variable_value(temp_variable, scope_stack)
+        struct_object_ref = var_value['val']
+
+        accessing_from = struct_object_ref
+
+        # Loop through dot accesses
+            # Left-associative: For each access, get the value stored in that field and use that for the next access
+        for field_access in parts[1:]:
+            if (type(accessing_from) == Element and accessing_from.elem_type == 'nil'):
+                super().error(
+                    ErrorType.FAULT_ERROR,
+                    f"Attempting to use dot operator on uninitialized struct via field \"{field_access}\""
+                )
+            struct_val_dict = accessing_from.get_field(field_access)
+            returned_value = struct_val_dict['val']
+            accessing_from = returned_value
+
+        return struct_val_dict
+
+
+
 
     
     ''' ---- INPUTI function ---- '''
