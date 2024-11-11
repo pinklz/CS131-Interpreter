@@ -1247,10 +1247,6 @@ class Interpreter(InterpreterBase):
         
     ''' ---- STRUCT PROCESSING  ---- '''
     def struct_access(self, node, scope_stack):
-        # print("\n-- STRUCT ACCESS in progress - hard hat required")
-        # print("Node passed in: ", node)
-        # print("Current scope stack ")
-        # print(scope_stack)
 
         var_access = node.dict['name']
         parts = var_access.split('.')
@@ -1259,8 +1255,16 @@ class Interpreter(InterpreterBase):
         temp_variable.dict['name'] = var_name
 
         var_value = self.get_variable_value(temp_variable, scope_stack)
-        struct_object_ref = var_value['val']
 
+        # Check it is a struct
+        if (var_value['type'] not in self.defined_structs):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use dot operator on NON-STRUCT variable { {var_name} } of type \"{var_value['type']}\""
+            )
+
+        
+        struct_object_ref = var_value['val']
         accessing_from = struct_object_ref
 
         struct_val_dict = {}
@@ -1304,6 +1308,12 @@ class Interpreter(InterpreterBase):
             super().error(
                 ErrorType.NAME_ERROR,
                 f"Variable { {var_name} } not found in any scope"
+            )
+
+        if (scope_to_update[var_name]['type'] not in self.defined_structs):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use dot operator on NON-STRUCT variable { {var_name} } of type \"{scope_to_update[var_name]['type']}\""
             )
 
         # Get the actual object dictionary to update
