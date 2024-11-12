@@ -246,6 +246,12 @@ class Interpreter(InterpreterBase):
             elif(arg_type == 'nil'):
                 func_arg_values.append(arg)
 
+            elif(arg_type == 'new'):
+                # Create new STRUCT + pass in dictionary mapping type to the obj ref
+                struct_type = arg.dict['var_type']
+                struct_OR = self.BrewinStruct(self, arg)
+                func_arg_values.append({'type':struct_type, 'val':struct_OR})
+
             else:
                 # print("\n**** Out of argument options to check (just appending whole arg) \n")
                 func_arg_values.append(arg)
@@ -525,8 +531,6 @@ class Interpreter(InterpreterBase):
             other_var_val = self.get_variable_value(node_expression, scope_stack)
             # print("RETURNED VALUE = ", other_var_val)
             other_var_type = other_var_val['type']
-
-            # TODO: different for structs, need to use the same object ref, not a copy
             
             # If trying to assign a variable of a different type --> type error
             if (other_var_type != var_type):
@@ -1111,7 +1115,7 @@ class Interpreter(InterpreterBase):
             
             if op_type == 'fcall':
                 fcall_ret = self.run_fcall(node, func_vars)
-                # TODO: if decide to return dictionary here, can get type with fcall_ret['type']
+                # if decide to return dictionary here, can get type with fcall_ret['type']
                 return fcall_ret['val']
             
             if op_type == 'nil':
@@ -1227,7 +1231,8 @@ class Interpreter(InterpreterBase):
     
 
     def get_variable_value(self, node, scope_stack):
-        # TODO (structs): maybe return object reference as value for struct, would make most things easier I think
+        # POSSIBLE PROBLEM CAUSE with structs
+        # TODO (structs): might need to return struct_access()['val'] b/c need actual obj ref, not the Object thing that python stores
         
         var_name = node.dict['name']
         # Check for struct access
@@ -1423,7 +1428,7 @@ class Interpreter(InterpreterBase):
             print("\tINSIDE PRINTOUT")
 
         # lst = list of strings to concatenate
-        string_to_output = ""       # TODO: check if 0 arguments should still print "" or just return
+        string_to_output = ""
         for element in lst:
             if (self.trace_output == True):
                 print("\t", element)
