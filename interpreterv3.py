@@ -344,11 +344,15 @@ class Interpreter(InterpreterBase):
                 while (len(scope_stack) > 1):
                     scope_stack.pop()
 
-                # print("\n--IN RUN_FUNC\tReturned value = ", rval)
+                # print("\n--IN RUN_FUNC(statement loop)\tReturned value = ", rval)
                 if (expected_return_type == 'void'):
                     return
                 
-                if rval.return_type != expected_return_type:
+                if (rval.return_type == None):
+                    return_val = self.default_values(expected_return_type)
+                    return ReturnValue(return_val, expected_return_type)
+                
+                elif rval.return_type != expected_return_type:
                     super().error(
                         ErrorType.TYPE_ERROR,
                         f"Returned value { {rval.return_value} } does not match expected type \"{expected_return_type}\" "
@@ -391,7 +395,10 @@ class Interpreter(InterpreterBase):
                 return_val = None
                 return_type = None
 
-                if return_expression == None or return_expression.elem_type == "nil":
+                if return_val == None:
+                    pass
+                    # Want return val and return type to be none
+                elif return_expression.elem_type == "nil":
                     return_val = Element("nil")
                 else:
                     return_exp_type = return_expression.elem_type
