@@ -297,6 +297,7 @@ class Interpreter(InterpreterBase):
 
         # Map argument values to the parameter names
         for param, var_value in zip(node_params, func_args):
+            print("\n--- inside RUN FUNC\n\tParam: ", param, "\tVar_value: ", var_value)
             var_name = param.dict['name']
             var_type = param.dict['var_type']
 
@@ -549,13 +550,18 @@ class Interpreter(InterpreterBase):
             
             # If trying to assign a variable of a different type --> type error
             if (other_var_type != var_type):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Cannot assign type of variable  { { other_var_type} } of variable \"{node_expression.dict['name']}\" to variable \"{var_name}\" of type { {var_type} }"
-                )
+                # Coercion between int --> bool
+                if (var_type == 'bool' and other_var_type == 'int'):
+                    scope_to_update[var_name]['val'] = bool(other_var_val['val'])
+                else:
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign type of variable  { { other_var_type} } of variable \"{node_expression.dict['name']}\" to variable \"{var_name}\" of type { {var_type} }"
+                    )
+            else:
+                # Otherwise, update w/ new variable value       ( copy for primitives )
+                scope_to_update[var_name]['val'] = other_var_val['val']
             
-            # Otherwise, update w/ new variable value       ( copy for primitives )
-            scope_to_update[var_name]['val'] = other_var_val['val']
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
@@ -563,12 +569,16 @@ class Interpreter(InterpreterBase):
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
             if (fcall_ret['type'] != var_type):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Cannot assign fcall return value of type  { { fcall_ret['val']} } to variable \"{var_name}\" of type { {var_type} }"
-                )
-
-            scope_to_update[var_name]['val'] = fcall_ret['val']
+                if (var_type == 'bool' and fcall_ret['type'] == 'int'):
+                    scope_to_update[var_name]['val'] = bool(fcall_ret['val'])
+                else:
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign fcall return value of type  { { fcall_ret['val']} } to variable \"{var_name}\" of type { {var_type} }"
+                    )
+            else:
+                scope_to_update[var_name]['val'] = fcall_ret['val']
+            
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
