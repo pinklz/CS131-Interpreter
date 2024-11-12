@@ -1206,23 +1206,36 @@ class Interpreter(InterpreterBase):
         
         # If different types
         elif ( type(op1_value) != type(op2_value) ):
-            if (self.trace_output == True):
-                print("\t False -- different types for ", op1_value, " and ", op2_value)
-            same = False
+            op1_type = type(op1_value)
+            op2_type = type(op2_value)
+
+            if (op1_type == bool and op2_type == int) or (op1_type == int and op2_type == bool):
+                same = (bool(op1_value) == bool(op2_value))
+            else:
+                same = False
+            
+            # if (self.trace_output == True):
+            #     print("\t False -- different types for ", op1_value, " and ", op2_value)
+            # same = False
         else:
             same = (op1_value == op2_value)
 
         op1_type = None
         op2_type = None
-        try:
-            op1_type = op1_value.elem_type
-        except:
-            pass
 
-        try:
+        if (type(op1_value) == Element):
+            op1_type = op1_value.elem_type
+        if (type(op2_value) == Element):
             op2_type = op2_value.elem_type
-        except:
-            pass
+        # try:
+        #     op1_type = op1_value.elem_type
+        # except:
+        #     pass
+
+        # try:
+        #     op2_type = op2_value.elem_type
+        # except:
+        #     pass
 
         if (op1_type == 'nil' and op2_type == 'nil'):
             same = True
