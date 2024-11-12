@@ -348,6 +348,11 @@ class Interpreter(InterpreterBase):
 
                 # print("\n--IN RUN_FUNC\tReturned value = ", rval)
                 if (expected_return_type == 'void'):
+                    if (rval.return_type != None or rval.return_value != None):
+                        super().error(
+                            ErrorType.TYPE_ERROR,
+                            f"Attempted to return a value from a VOID function"
+                        )
                     return
                 
                 if (rval.return_type == None and rval.return_value == None):
