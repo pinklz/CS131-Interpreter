@@ -635,7 +635,9 @@ class Interpreter(InterpreterBase):
         # If constant value
         if (condition.elem_type == 'bool'):
             eval_statements =  self.get_value(condition)
-        elif (condition.elem_type == 'int' or condition.elem_type == 'string' or condition.elem_type == 'nil'):
+        elif (condition.elem_type == 'int'):
+            eval_statements = bool(self.get_value(condition))
+        elif (condition.elem_type == 'string' or condition.elem_type == 'nil'):
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Cannot evaluate STRING or INT or NIL in 'if' statement condition"
@@ -646,8 +648,8 @@ class Interpreter(InterpreterBase):
             # Check variable is defined
             val = self.get_variable_value(condition, func_vars)
 
-            if val['type'] == 'bool':
-                eval_statements = val['val']
+            if val['type'] == 'bool' or val['type'] == 'int':
+                eval_statements = bool(val['val'])
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -657,8 +659,8 @@ class Interpreter(InterpreterBase):
         # If fcall
         elif (condition.elem_type == 'fcall'):
             fcall_return = self.run_fcall(condition, func_vars)
-            if (fcall_return['type'] == 'bool'):
-                eval_statements = fcall_return['val']
+            if (fcall_return['type'] == 'bool' or fcall_return['type'] == 'int'):
+                eval_statements = bool(fcall_return['val'])
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
