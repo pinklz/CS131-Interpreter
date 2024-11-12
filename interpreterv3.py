@@ -526,11 +526,18 @@ class Interpreter(InterpreterBase):
         if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
             # Check that type matches
             if (node_type != var_type):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Cannot assign type { { node_type} } to variable \"{var_name}\" of type { {var_type} }"
-                )
-            scope_to_update[var_name]['val'] = self.get_value(node_expression)
+                # Coercion between int --> bool
+                if (var_type == 'bool' and node_type == 'int'):
+                    int_val = self.get_value(node_expression)
+                    scope_to_update[var_name]['val'] = bool(int_val)
+                else:
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign type { { node_type} } to variable \"{var_name}\" of type { {var_type} }"
+                    )
+            else:
+                scope_to_update[var_name]['val'] = self.get_value(node_expression)
+            
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
 
