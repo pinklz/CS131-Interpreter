@@ -832,8 +832,8 @@ class Interpreter(InterpreterBase):
         
         node_type = node_expression.elem_type
 
-        if (node_type == 'bool'):
-            return self.get_value(node_expression)
+        if (node_type == 'bool' or node_type == 'int'):
+            return bool(self.get_value(node_expression))
         
         elif (node_type == 'var'):
             other_var_val = self.get_variable_value(node_expression, scope_stack)
@@ -1064,15 +1064,15 @@ class Interpreter(InterpreterBase):
 
         node_type = node.elem_type
 
-        if node_type == 'int' or node_type == 'string' or node_type == 'nil':
+        if node_type == 'string' or node_type == 'nil':
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Attempted to use int, string, or nil constant in bool operation"
             )
         
         # If already a boolean --> return
-        if node_type == 'bool':
-            return self.get_value(node)
+        if node_type == 'bool' or node_type == 'int':
+            return bool(self.get_value(node))
         
         # If variable
         if node_type == 'var':
@@ -1081,29 +1081,32 @@ class Interpreter(InterpreterBase):
 
             node_value = node_value['val']
 
-            if (return_node_type != 'bool'):
+            if (return_node_type != 'bool' and return_node_type != 'int'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Attempted to use int, string, or nil via existing variable {node.dict['name']} in BOOL operation"
                 )
             
             # Return variable value
-            return node_value
+            return bool(node_value)
         
         
         # Function call
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
             # Check function returned an integer
-            if (fcall_ret['type'] != 'bool'):
+            if (fcall_ret['type'] != 'bool' and fcall_ret['type'] != 'int'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Attempted to use TYPE \"{fcall_ret['type'] }\"  via fcall to \" {node.dict['name']} \" in BOOL operation"
                 )
                 
-            return fcall_ret['val']
+            return bool(fcall_ret['val'])
         
-        allowable_types = ['bool', 'var', 'fcall'] + self.BOOL_OPERATIONS + self.EQUALITY_COMPARISONS + self.INTEGER_COMPARISONS
+        if node_type in self.INT_OPERATIONS:
+            return bool(self.run_int_operation(node, func_vars))
+        
+        allowable_types = ['bool', 'var', 'fcall', 'int'] + self.BOOL_OPERATIONS + self.EQUALITY_COMPARISONS + self.INTEGER_COMPARISONS + self.INT_OPERATIONS
         
         # Unary Boolean NOT
         if node_type == '!':
