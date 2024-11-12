@@ -208,32 +208,46 @@ class Interpreter(InterpreterBase):
             if (arg_type == 'string' or arg_type == 'int' or arg_type == 'bool'):
                 # Check that type matches
                 if (param_type != arg_type):
-                    super().error(
+                    # Coercion between int --> bool
+                    if (param_type == 'bool' and arg_type == 'int'):
+                        int_val = self.get_value(arg)
+                        func_arg_values.append(bool(int_val))
+                    else:
+                        super().error(
                         ErrorType.TYPE_ERROR,
                         f"Cannot assign type { { arg_type} } to parameter \"{param.dict['name']}\" of type { {param_type} }"
                     )
-                func_arg_values.append(self.get_value(arg))
+                else:
+                    func_arg_values.append(self.get_value(arg))
 
             elif (arg_type == 'var'):
                 other_var_val = self.get_variable_value(arg, calling_func_vars)
                 other_var_type = other_var_val['type']
                 if (other_var_type != param_type):
-                    super().error(
-                        ErrorType.TYPE_ERROR,
-                        f"Cannot assign type { { other_var_type } } to PARAMETER \"{param.dict['name']}\" of type { {param_type} }"
-                    )
-
-                # Add copy of variable value or obj ref if struct
-                func_arg_values.append( other_var_val )
+                    # Coercion between int --> bool
+                    if (param_type == 'bool' and other_var_type == 'int'):
+                        func_arg_values.append( {'type': 'bool','val':bool(other_var_val['val'])} )
+                    else:
+                        super().error(
+                            ErrorType.TYPE_ERROR,
+                            f"Cannot assign type { { other_var_type } } to PARAMETER \"{param.dict['name']}\" of type { {param_type} }"
+                        )
+                else:
+                    # Add copy of variable value or obj ref if struct
+                    func_arg_values.append( other_var_val )
 
             elif (arg_type == 'fcall'):
                 fcall_ret = self.run_fcall( arg, calling_func_vars)
                 if (fcall_ret['type'] != param_type):
-                    super().error(
-                        ErrorType.TYPE_ERROR,
-                        f"Cannot assign type { { fcall_ret['type'] } } to PARAMETER \"{param.dict['name']}\" of type { {param_type} } via FUNCTION CALL RETURN VALUE"
-                    )
-                func_arg_values.append( fcall_ret['val'] )
+                    if (param_type == 'bool' and fcall_ret['type'] == 'int'):
+                        func_arg_values.append( bool(fcall_ret['val']) )
+                    else:
+                        super().error(
+                            ErrorType.TYPE_ERROR,
+                            f"Cannot assign type { { fcall_ret['type'] } } to PARAMETER \"{param.dict['name']}\" of type { {param_type} } via FUNCTION CALL RETURN VALUE"
+                        )
+                else:
+                    func_arg_values.append( fcall_ret['val'] )
 
             
             elif (param_type == 'int'):
@@ -297,7 +311,7 @@ class Interpreter(InterpreterBase):
 
         # Map argument values to the parameter names
         for param, var_value in zip(node_params, func_args):
-            print("\n--- inside RUN FUNC\n\tParam: ", param, "\tVar_value: ", var_value)
+            # print("\n--- inside RUN FUNC\n\tParam: ", param, "\tVar_value: ", var_value)
             var_name = param.dict['name']
             var_type = param.dict['var_type']
 
@@ -604,6 +618,7 @@ class Interpreter(InterpreterBase):
             if (self.trace_output == True):
                 print("\t\tUpdated scope_stack: ", scope_stack)
         
+        # Instantiating new struct object
         elif (node_type == 'new'):
             struct_OR = self.BrewinStruct(self, node_expression)
             scope_to_update[var_name]['val'] = struct_OR
