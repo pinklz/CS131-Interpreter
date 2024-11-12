@@ -838,13 +838,13 @@ class Interpreter(InterpreterBase):
         elif (node_type == 'var'):
             other_var_val = self.get_variable_value(node_expression, scope_stack)
             other_var_type = other_var_val['type']
-            if (other_var_type != 'bool'):
+            if (other_var_type != 'bool' and other_var_type != 'int'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot assign type of variable { { other_var_type} } of variable \"{node_expression.dict['name']}\" BOOL variable  (Inside BOOL_TYPES)"
                 )
             
-            return other_var_val['val']
+            return bool(other_var_val['val'])
 
         # Boolean Operation to be computed
         elif (node_type in self.BOOL_OPERATIONS):
@@ -861,18 +861,18 @@ class Interpreter(InterpreterBase):
         # Function call
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
-            if (fcall_ret['type'] != 'bool'):
+            if (fcall_ret['type'] != 'bool' and fcall_ret['type'] != 'int'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in BOOL_TYPES"
                 )
-            return fcall_ret['val']
+            return bool(fcall_ret['val'])
 
         # Integer Operation to be computed
         # TODO: Coercion allowed here
         elif (node_type in self.INT_OPERATIONS):
             return_val =  self.run_int_operation(node_expression, scope_stack)
-
+            return bool(return_val)
 
         else:
             super().error(
