@@ -244,6 +244,11 @@ class Interpreter(InterpreterBase):
                 func_arg_values.append( self.bool_types(arg, calling_func_vars) )
 
             elif(arg_type == 'nil'):
+                if (param_type not in self.defined_structs):
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Attempted to pass in NIL argument as type { {param_type} } to function \"{func_name}\""
+                    )
                 func_arg_values.append(arg)
 
             elif(arg_type == 'new'):
@@ -300,7 +305,10 @@ class Interpreter(InterpreterBase):
 
             if var_type in self.defined_structs:
                 # If it's a struct, append the actual obj ref (?) instead of the Object (?) idk I don't really understand why I need this
-                func_vars[var_name]['val'] = var_value['val']
+                if (type(var_value) == Element and var_value.elem_type == 'nil'):
+                    func_vars[var_name]['val'] = Element("nil")
+                else:
+                    func_vars[var_name]['val'] = var_value['val']
             else:
                 func_vars[var_name]['val'] = var_value
             
