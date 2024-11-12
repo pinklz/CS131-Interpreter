@@ -277,6 +277,7 @@ class Interpreter(InterpreterBase):
 
 
         function_ret_val = self.run_func( func_to_run , func_arg_values )
+        # If void function
         if (function_ret_val == None):
             return None
         return {'val': function_ret_val.return_value, 'type':function_ret_val.return_type}
@@ -1160,6 +1161,8 @@ class Interpreter(InterpreterBase):
             
             if op_type == 'fcall':
                 fcall_ret = self.run_fcall(node, func_vars)
+                if (fcall_ret is None):
+                    return None
                 # if decide to return dictionary here, can get type with fcall_ret['type']
                 return fcall_ret['val']
             
@@ -1186,6 +1189,8 @@ class Interpreter(InterpreterBase):
         if (self.trace_output == True):
             print("CHECKING EQUALITY: ", node.elem_type)
 
+        # TODO: deal w/ 'new' being used in operations, should put in all functions (including eval op)
+
         node_type = node.elem_type
         op1 = node.dict['op1']
         op2 = node.dict['op2']
@@ -1193,6 +1198,12 @@ class Interpreter(InterpreterBase):
         # Get operator values 
         op1_value = self.eval_op(op1, func_vars)
         op2_value = self.eval_op(op2, func_vars)
+
+        if op1_value is None or op2_value is None:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use NONE in equality comparison"
+            )
 
         same = None
 
@@ -1213,10 +1224,7 @@ class Interpreter(InterpreterBase):
                 same = (bool(op1_value) == bool(op2_value))
             else:
                 same = False
-            
-            # if (self.trace_output == True):
-            #     print("\t False -- different types for ", op1_value, " and ", op2_value)
-            # same = False
+ 
         else:
             same = (op1_value == op2_value)
 
@@ -1227,15 +1235,7 @@ class Interpreter(InterpreterBase):
             op1_type = op1_value.elem_type
         if (type(op2_value) == Element):
             op2_type = op2_value.elem_type
-        # try:
-        #     op1_type = op1_value.elem_type
-        # except:
-        #     pass
 
-        # try:
-        #     op2_type = op2_value.elem_type
-        # except:
-        #     pass
 
         if (op1_type == 'nil' and op2_type == 'nil'):
             same = True
@@ -1265,6 +1265,12 @@ class Interpreter(InterpreterBase):
         # Get operator values 
         op1_value = self.run_int_operation(op1, func_vars)
         op2_value = self.run_int_operation(op2, func_vars)
+
+        if op1_value is None or op2_value is None:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use NONE in equality comparison"
+            )
 
         # If not integers --> type error
         if ( type(op1_value) != int) or (type(op2_value) != int):
