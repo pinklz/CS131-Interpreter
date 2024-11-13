@@ -50,6 +50,8 @@ class Interpreter(InterpreterBase):
                         ErrorType.TYPE_ERROR,
                         f"Cannot initialize struct field of type \"{field_type}\" b/c it doesn't exist"
                     )
+
+                # TODO: don't allow duplicate field names
                 self.struct_fields[field_name] = {'type':field_type, 'val':interpreter.default_values(field_type)}
             
         def get_field(self, field):
@@ -236,14 +238,14 @@ class Interpreter(InterpreterBase):
                     # Coercion between int --> bool
                     if (param_type == 'bool' and arg_type == 'int'):
                         int_val = self.get_value(arg)
-                        func_arg_values.append(bool(int_val))
+                        func_arg_values.append({'type':'bool', 'val':bool(int_val)})
                     else:
                         super().error(
                         ErrorType.TYPE_ERROR,
                         f"Cannot assign type { { arg_type} } to parameter \"{param.dict['name']}\" of type { {param_type} }"
                     )
                 else:
-                    func_arg_values.append(self.get_value(arg))
+                    func_arg_values.append({'type':arg_type, 'val':self.get_value(arg)})
 
             elif (arg_type == 'var'):
                 other_var_val = self.get_variable_value(arg, calling_func_vars)
@@ -259,7 +261,7 @@ class Interpreter(InterpreterBase):
                         )
                 else:
                     # Add copy of variable value or obj ref if struct
-                    func_arg_values.append( other_var_val )
+                    func_arg_values.append( other_var_val )     # dictionary
 
             elif (arg_type == 'fcall'):
                 fcall_ret = self.run_fcall( arg, calling_func_vars)
@@ -272,15 +274,15 @@ class Interpreter(InterpreterBase):
                             f"Cannot assign type { { fcall_ret['type'] } } to PARAMETER \"{param.dict['name']}\" of type { {param_type} } via FUNCTION CALL RETURN VALUE"
                         )
                 else:
-                    func_arg_values.append( fcall_ret['val'] )
+                    func_arg_values.append( fcall_ret )
 
             
             elif (param_type == 'int'):
-                func_arg_values.append( self.int_types(arg, calling_func_vars) )
+                func_arg_values.append( {'type':'int', 'val': self.int_types(arg, calling_func_vars)} )
             elif (param_type == 'string'):
-                func_arg_values.append( self.string_types(arg, calling_func_vars) )
+                func_arg_values.append( {'type': 'string', 'val': self.string_types(arg, calling_func_vars)} )
             elif (param_type == 'bool'):
-                func_arg_values.append( self.bool_types(arg, calling_func_vars) )
+                func_arg_values.append( {'type':'bool', 'val': self.bool_types(arg, calling_func_vars)} )
 
             elif(arg_type == 'nil'):
                 if (param_type not in self.defined_structs):
@@ -288,7 +290,7 @@ class Interpreter(InterpreterBase):
                         ErrorType.TYPE_ERROR,
                         f"Attempted to pass in NIL argument as type { {param_type} } to function \"{func_name}\""
                     )
-                func_arg_values.append(arg)
+                func_arg_values.append({'type':'nil', 'val': Element("nil")})
 
             elif(arg_type == 'new'):
                 # Create new STRUCT + pass in dictionary mapping type to the obj ref
@@ -344,14 +346,7 @@ class Interpreter(InterpreterBase):
             func_vars[var_name] = {}
             func_vars[var_name]['type'] = var_type
 
-            if var_type in self.defined_structs:
-                # If it's a struct, append the actual obj ref (?) instead of the Object (?) idk I don't really understand why I need this
-                if (type(var_value) == Element and var_value.elem_type == 'nil'):
-                    func_vars[var_name]['val'] = Element("nil")
-                else:
-                    func_vars[var_name]['val'] = var_value['val']
-            else:
-                func_vars[var_name]['val'] = var_value
+            func_vars[var_name]['val'] = var_value['val']
             
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
