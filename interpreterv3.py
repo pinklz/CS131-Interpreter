@@ -95,8 +95,6 @@ class Interpreter(InterpreterBase):
             struct_name = struct.dict['name']
             allowable_types.append(struct_name)
             self.defined_structs[struct_name] = struct
-
-        # print("\t All allowable types: ", allowable_types)
         
 
         # Search through program functions to find the MAIN node
@@ -116,11 +114,17 @@ class Interpreter(InterpreterBase):
             # print("Function name = ", func_name, "\n\tNode = ", func)
             for arg in func.dict['args']:
                 arg_type = arg.dict['var_type']
-                # print("\t\t", arg, "\tType = ", arg_type)
                 if (arg_type not in allowable_types) or arg_type == 'void':
                     super().error(
                         ErrorType.TYPE_ERROR,
                         f"Invalid type for argument \"{arg.dict['name']}\" of type { {arg_type} }"
+                    )
+
+            ret_type = func.dict['return_type']
+            if (ret_type not in allowable_types):
+                super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Invalid RETURN TYPE for function \"{func_name}\" of type { {ret_type} }"
                     )
         
         
@@ -129,7 +133,6 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR,
                 "No MAIN node found in program"
             )
-
         
         # Run MAIN node
         return self.run_func(main_node, [])
