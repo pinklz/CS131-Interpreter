@@ -1476,6 +1476,11 @@ class Interpreter(InterpreterBase):
                     ErrorType.FAULT_ERROR,
                     f"Attempting to use dot operator on uninitialized struct via field \"{field_access}\""
                 )
+            if (type(accessing_from) != self.BrewinStruct):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempted to use dot operator on NON-STRUCT variable { {field_access} } of type \"{type(accessing_from)}\""
+                )
             struct_val_dict = accessing_from.get_field(field_access)
             # print("\tAfter calling 'get_field', this is what was returned\n\t", struct_val_dict)
             returned_value = struct_val_dict['val']
