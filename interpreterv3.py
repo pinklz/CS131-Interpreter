@@ -45,6 +45,11 @@ class Interpreter(InterpreterBase):
             for field in struct_to_initialize.dict['fields']:
                 field_name = field.dict['name']
                 field_type = field.dict['var_type']
+                if (field_type not in ['int', 'bool', 'string']+ list(interpreter.defined_structs.keys())):
+                    InterpreterBase.error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot initialize struct field of type \"{field_type}\" b/c it doesn't exist"
+                    )
                 self.struct_fields[field_name] = {'type':field_type, 'val':interpreter.default_values(field_type)}
             
         def get_field(self, field):
@@ -1329,7 +1334,7 @@ class Interpreter(InterpreterBase):
         if op1_value is None or op2_value is None:
             super().error(
                 ErrorType.TYPE_ERROR,
-                f"Attempted to use NONE in equality comparison"
+                f"Attempted to use NONE in integer comparison operation"
             )
 
         # If not integers --> type error
