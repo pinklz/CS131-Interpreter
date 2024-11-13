@@ -378,8 +378,10 @@ class Interpreter(InterpreterBase):
                 
                 if (rval.return_type == None and rval.return_value == None):
                     return_val = self.default_values(expected_return_type)
-                    
                     return ReturnValue(return_val, expected_return_type)
+                
+                if (rval.return_type == 'int' and expected_return_type == 'bool'):
+                        return ReturnValue( bool(rval.return_value), expected_return_type )
                 
                 if rval.return_type != expected_return_type:
                     super().error(
