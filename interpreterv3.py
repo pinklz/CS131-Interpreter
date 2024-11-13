@@ -1178,7 +1178,7 @@ class Interpreter(InterpreterBase):
             if (return_node_type != 'bool' and return_node_type != 'int'):
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Attempted to use int, string, or nil via existing variable {node.dict['name']} in BOOL operation"
+                    f"Attempted to use string, or nil via existing variable {node.dict['name']} in BOOL operation"
                 )
             
             # Return variable value
@@ -1294,12 +1294,12 @@ class Interpreter(InterpreterBase):
         op2 = node.dict['op2']
 
         # Get operator values 
-        op1_value = self.eval_op(op1, func_vars)
-        op2_value = self.eval_op(op2, func_vars)
+        op1 = self.eval_op(op1, func_vars)
+        op2 = self.eval_op(op2, func_vars)
 
         # print("\n--In CHECK EQUALITY: \n\tOp1 = ", op1_value, "\tOp2 = ", op2_value)
 
-        if op1_value is None or op2_value is None:
+        if op1 is None or op2 is None:
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Attempted to use NONE in equality comparison"
@@ -1307,58 +1307,62 @@ class Interpreter(InterpreterBase):
 
         same = NO_VALUE_DEFINED
 
-        if (op1_value is NO_VALUE_DEFINED) or (op2_value is NO_VALUE_DEFINED):
+        if (op1 is NO_VALUE_DEFINED) or (op2 is NO_VALUE_DEFINED):
             print("** ERR: EVAL_OP did not return anything\n___________________________\n")
+
+        op1_value = op1['val']
+        op2_value = op1['val']
+
+        op1_type = op1['type']
+        op2_type = op2['type']
 
         
         # If both are bool
-        if (op1_value['type'] == 'bool' and op2_value['type'] == 'bool'):
-            if op1_value['val'] is True and op2_value['val'] is True:
+        if (op1_type == 'bool' and op2_type == 'bool'):
+            if op1_value is True and op2_value is True:
                 same = True
-            elif op1_value['val'] is False and op2_value['val'] is False:
+            elif op1_value is False and op2_value is False:
                 same = True
             else:
                 same = False
 
-        op1_type = op1_value['type']
-        op2_type = op2_value['type']
 
         # NIL check - only structs can be compared to nil
         if op1_type == 'nil':
             if op2_type == 'nil':
                 same = True 
             elif op2_type in self.defined_structs:
-                same = ( type(op2_value['val']) == Element and op2_value['val'].elem_type == 'nil')
+                same = ( type(op2_value) == Element and op2_value.elem_type == 'nil')
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Attempt to compare NIL to non-struct element { {op2_value['val']} }"
+                    f"Attempt to compare NIL to non-struct element { {op2_value} }"
                 )
         elif op2_type == 'nil':
             # Should already be checked if they're both nil, don't need to check if op1 is nil here
             if op1_type in self.defined_structs:
-                same = (type(op1_value['val']) == Element and op1_value['val'].elem_type == 'nil' )
+                same = (type(op1_value) == Element and op1_value.elem_type == 'nil' )
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Attempt to compare NIL to non-struct element { {op1_value['val']} }"
+                    f"Attempt to compare NIL to non-struct element { {op1_value} }"
                 )
 
               # Compare structs
         elif (op1_type in self.defined_structs and op2_type in self.defined_structs):
-            op1_nil = ( type(op1_value['val']) == Element and op1_value['val'].elem_type == 'nil' )
-            op2_nil = ( type(op2_value['val']) == Element and op2_value['val'].elem_type == 'nil' )
+            op1_nil = ( type(op1_value) == Element and op1_value.elem_type == 'nil' )
+            op2_nil = ( type(op2_value) == Element and op2_value.elem_type == 'nil' )
 
-            same = ( (op1_value['val'] == op2_value['val']) or (op1_nil and op2_nil) )
+            same = ( (op1_value == op2_value) or (op1_nil and op2_nil) )
 
         elif (op1_type != op2_type):
             if (op1_type == 'bool' and op2_type == 'int') or (op1_type == 'int' and op2_type == 'bool'):
-                same = ( bool(op1_value['val']) == bool (op2_value['val']))
+                same = ( bool(op1_value) == bool (op2_value))
             else:
                 same = False
 
         else:
-            same = (op1_value['val'] == op2_value['val'])
+            same = (op1_value == op2_value)
 
         # Actually perform equality check
         if node_type == '==':
