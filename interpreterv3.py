@@ -267,7 +267,7 @@ class Interpreter(InterpreterBase):
                 fcall_ret = self.run_fcall( arg, calling_func_vars)
                 if (fcall_ret['type'] != param_type):
                     if (param_type == 'bool' and fcall_ret['type'] == 'int'):
-                        func_arg_values.append( bool(fcall_ret['val']) )
+                        func_arg_values.append( {'type': 'bool', 'val': bool(fcall_ret['val'])} )
                     else:
                         super().error(
                             ErrorType.TYPE_ERROR,
