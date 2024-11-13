@@ -1297,6 +1297,8 @@ class Interpreter(InterpreterBase):
         op1_value = self.eval_op(op1, func_vars)
         op2_value = self.eval_op(op2, func_vars)
 
+        # print("\n--In CHECK EQUALITY: \n\tOp1 = ", op1_value, "\tOp2 = ", op2_value)
+
         if op1_value is None or op2_value is None:
             super().error(
                 ErrorType.TYPE_ERROR,
@@ -1326,7 +1328,7 @@ class Interpreter(InterpreterBase):
             if op2_type == 'nil':
                 same = True 
             elif op2_type in self.defined_structs:
-                same = (op1_value['val'] == op2_value['val'])     # Is False
+                same = ( type(op2_value['val']) == Element and op2_value['val'].elem_type == 'nil')
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -1335,12 +1337,19 @@ class Interpreter(InterpreterBase):
         elif op2_type == 'nil':
             # Should already be checked if they're both nil, don't need to check if op1 is nil here
             if op1_type in self.defined_structs:
-                same = (op2_value['val'] == op1_value['val'])
+                same = (type(op1_value['val']) == Element and op1_value['val'].elem_type == 'nil' )
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Attempt to compare NIL to non-struct element { {op1_value['val']} }"
                 )
+
+              # Compare structs
+        elif (op1_type in self.defined_structs and op2_type in self.defined_structs):
+            op1_nil = ( type(op1_value['val']) == Element and op1_value['val'].elem_type == 'nil' )
+            op2_nil = ( type(op2_value['val']) == Element and op2_value['val'].elem_type == 'nil' )
+
+            same = ( (op1_value['val'] == op2_value['val']) or (op1_nil and op2_nil) )
 
         elif (op1_type != op2_type):
             if (op1_type == 'bool' and op2_type == 'int') or (op1_type == 'int' and op2_type == 'bool'):
