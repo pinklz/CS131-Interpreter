@@ -385,6 +385,9 @@ class Interpreter(InterpreterBase):
                     )
                 return rval
 
+        if expected_return_type == 'void':
+            return None
+        
         return_val = self.default_values(expected_return_type)
         return ReturnValue(return_val, expected_return_type)
     
