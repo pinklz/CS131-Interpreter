@@ -505,6 +505,12 @@ class Interpreter(InterpreterBase):
             return 0
         if (type in self.defined_structs):
             return Element("nil")
+        
+        else:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Unrecognized type \"{type}\" for requested default value"
+            )
 
 
     ''' ---- Running Statement Types ---- '''
@@ -628,7 +634,7 @@ class Interpreter(InterpreterBase):
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
             # Check for void function
-            if (fcall_ret == None):
+            if (fcall_ret is None):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot assign VOID function { {node_expression.dict['name']} } to variable \"{var_name}\""
@@ -682,33 +688,33 @@ class Interpreter(InterpreterBase):
 
     ''' ---- If Statement ---- '''
     def check_condition(self, condition, func_vars):
+
+        condition_type = condition.elem_type
         
         # If constant value
-        if (condition.elem_type == 'bool'):
-            eval_statements =  self.get_value(condition)
-        elif (condition.elem_type == 'int'):
-            eval_statements = bool(self.get_value(condition))
-        elif (condition.elem_type == 'string' or condition.elem_type == 'nil'):
+        if (condition_type == 'bool' or condition_type == 'int'):
+            return bool(self.get_value(condition))
+        elif (condition_type == 'string' or condition_type == 'nil'):
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Cannot evaluate STRING or INT or NIL in 'if' statement condition"
             )
         
         # If variable value
-        elif (condition.elem_type == 'var'):
+        elif (condition_type == 'var'):
             # Check variable is defined
             val = self.get_variable_value(condition, func_vars)
 
             if val['type'] == 'bool' or val['type'] == 'int':
-                eval_statements = bool(val['val'])
+                return bool(val['val'])
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Cannot evaluate STRING or INT (or nil?) in 'if' statement condition, attempted (via existing variable {condition.dict['name']} value)"
+                    f"Cannot evaluate non bool/int in 'if' statement condition, attempted (via existing variable {condition.dict['name']} value)"
                 )
 
         # If fcall
-        elif (condition.elem_type == 'fcall'):
+        elif (condition_type == 'fcall'):
             fcall_return = self.run_fcall(condition, func_vars)
             if (fcall_return is None):
                 super().error(
@@ -717,19 +723,21 @@ class Interpreter(InterpreterBase):
                 )
 
             if (fcall_return['type'] == 'bool' or fcall_return['type'] == 'int'):
-                eval_statements = bool(fcall_return['val'])
+                return bool(fcall_return['val'])
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot evaluate NON-BOOL in 'if' statement condition, attempted via fcall to \" {condition.dict['name']} \""
                 )
 
-        elif (condition.elem_type in self.EQUALITY_COMPARISONS):
+        elif (condition_type in self.EQUALITY_COMPARISONS):
             eval_statements = self.check_equality(condition, func_vars)
-        elif (condition.elem_type in self.INTEGER_COMPARISONS):
+        elif (condition_type in self.INTEGER_COMPARISONS):
             eval_statements = self.integer_compare(condition, func_vars)
-        elif (condition.elem_type in self.BOOL_OPERATIONS):
+        elif (condition_type in self.BOOL_OPERATIONS):
             eval_statements = self.run_bool_operation(condition, func_vars)
+        elif (condition_type in self.INT_OPERATIONS):
+            eval_statements = bool(self.run_int_operation(condition, func_vars))
         
         # CHECK : IF none of these, is likely an integer expression
         else:
