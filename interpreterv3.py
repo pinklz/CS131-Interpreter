@@ -87,7 +87,6 @@ class Interpreter(InterpreterBase):
                 "Initial element type is not 'program' "
             )
 
-        # print("\n---- in RUN")
         allowable_types = ['int', 'string', 'bool', 'void']
         
         # Loop through all provided user-defined structs, add to dictionary of defined structs
@@ -111,7 +110,6 @@ class Interpreter(InterpreterBase):
                 main_node = func
 
             # Check for valid return types and parameters
-            # print("Function name = ", func_name, "\n\tNode = ", func)
             for arg in func.dict['args']:
                 arg_type = arg.dict['var_type']
                 if (arg_type not in allowable_types) or arg_type == 'void':
@@ -323,7 +321,6 @@ class Interpreter(InterpreterBase):
         node_dict = func_node.dict
         node_params = node_dict['args']
         expected_return_type = node_dict['return_type']
-        # print("----in RUN_FUNC - expected return type = ", expected_return_type)
 
 
         if (self.trace_output == True):
@@ -336,7 +333,6 @@ class Interpreter(InterpreterBase):
 
         # Map argument values to the parameter names
         for param, var_value in zip(node_params, func_args):
-            # print("\n--- inside RUN FUNC\n\tParam: ", param, "\tVar_value: ", var_value)
             var_name = param.dict['name']
             var_type = param.dict['var_type']
 
@@ -352,7 +348,6 @@ class Interpreter(InterpreterBase):
             else:
                 func_vars[var_name]['val'] = var_value
             
-        # print("FUNC VARS AFTER PARAM + ARG MATCHING: \n", func_vars)
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
@@ -368,7 +363,6 @@ class Interpreter(InterpreterBase):
                 while (len(scope_stack) > 1):
                     scope_stack.pop()
 
-                # print("\n--IN RUN_FUNC\tReturned value = ", rval)
                 if (expected_return_type == 'void'):
                     if (rval.return_type != None or rval.return_value != None):
                         super().error(
@@ -622,6 +616,12 @@ class Interpreter(InterpreterBase):
         # Function call
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
+            # Check for void function
+            if (fcall_ret == None):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign VOID function { {node_expression.dict['name']} } to variable \"{var_name}\""
+                )
             if (fcall_ret['type'] != var_type):
                 if (var_type == 'bool' and fcall_ret['type'] == 'int'):
                     scope_to_update[var_name]['val'] = bool(fcall_ret['val'])
@@ -699,6 +699,12 @@ class Interpreter(InterpreterBase):
         # If fcall
         elif (condition.elem_type == 'fcall'):
             fcall_return = self.run_fcall(condition, func_vars)
+            if (fcall_return is None):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot use VOID function { {condition.dict['name']} } in CONDITION"
+                )
+
             if (fcall_return['type'] == 'bool' or fcall_return['type'] == 'int'):
                 eval_statements = bool(fcall_return['val'])
             else:
