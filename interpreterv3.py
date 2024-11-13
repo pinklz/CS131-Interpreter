@@ -87,7 +87,18 @@ class Interpreter(InterpreterBase):
                 "Initial element type is not 'program' "
             )
 
+        # print("\n---- in RUN")
+        allowable_types = ['int', 'string', 'bool', 'void']
         
+        # Loop through all provided user-defined structs, add to dictionary of defined structs
+        for struct in self.ast.dict['structs']:
+            struct_name = struct.dict['name']
+            allowable_types.append(struct_name)
+            self.defined_structs[struct_name] = struct
+
+        # print("\t All allowable types: ", allowable_types)
+        
+
         # Search through program functions to find the MAIN node
         main_node = NO_VALUE_DEFINED
         for func in self.ast.dict['functions']:
@@ -100,17 +111,25 @@ class Interpreter(InterpreterBase):
             # Identify main_node to run aftter
             if (func.dict['name'] == 'main'):
                 main_node = func
+
+            # Check for valid return types and parameters
+            # print("Function name = ", func_name, "\n\tNode = ", func)
+            for arg in func.dict['args']:
+                arg_type = arg.dict['var_type']
+                # print("\t\t", arg, "\tType = ", arg_type)
+                if (arg_type not in allowable_types) or arg_type == 'void':
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Invalid type for argument \"{arg.dict['name']}\" of type { {arg_type} }"
+                    )
+        
+        
         if (main_node is NO_VALUE_DEFINED):
             super().error(
                 ErrorType.NAME_ERROR,
                 "No MAIN node found in program"
             )
 
-        
-        for struct in self.ast.dict['structs']:
-            # Loop through all provided user-defined structs, add to dictionary of defined structs
-            struct_name = struct.dict['name']
-            self.defined_structs[struct_name] = struct
         
         # Run MAIN node
         return self.run_func(main_node, [])
