@@ -1297,8 +1297,6 @@ class Interpreter(InterpreterBase):
         op1 = self.eval_op(op1, func_vars)
         op2 = self.eval_op(op2, func_vars)
 
-        # print("\n--In CHECK EQUALITY: \n\tOp1 = ", op1, "\tOp2 = ", op2)
-
         if op1 is None or op2 is None:
             super().error(
                 ErrorType.TYPE_ERROR,
@@ -1447,7 +1445,12 @@ class Interpreter(InterpreterBase):
         temp_variable = Element("var")
         temp_variable.dict['name'] = var_name
 
-        var_value = self.get_variable_value(temp_variable, scope_stack)
+        # print("\n--Inside STRUCT ACCESS\tNode = ", node)
+        # print("\tVariable name I'm looking for = ", var_name)
+
+        var_value = self.get_variable_value(temp_variable, scope_stack)     # returns dictionary w/ entry
+
+        # print("\tValue returned from GET_VAR_VALUE = ", var_value)
 
         # Check it is a struct
         if (var_value['type'] not in self.defined_structs):
@@ -1460,17 +1463,21 @@ class Interpreter(InterpreterBase):
         struct_object_ref = var_value['val']
         accessing_from = struct_object_ref
 
+        # print("\n\tStruct OBJECT REFERENCE: ", struct_object_ref)
+
         struct_val_dict = {}
 
         # Loop through dot accesses
             # Left-associative: For each access, get the value stored in that field and use that for the next access
         for field_access in parts[1:]:
+            # print("Currently Accessing from : ", accessing_from)
             if (type(accessing_from) == Element and accessing_from.elem_type == 'nil'):
                 super().error(
                     ErrorType.FAULT_ERROR,
                     f"Attempting to use dot operator on uninitialized struct via field \"{field_access}\""
                 )
             struct_val_dict = accessing_from.get_field(field_access)
+            # print("\tAfter calling 'get_field', this is what was returned\n\t", struct_val_dict)
             returned_value = struct_val_dict['val']
             accessing_from = returned_value
 
@@ -1524,12 +1531,16 @@ class Interpreter(InterpreterBase):
         
         if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
             if (node_type != var_type):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Cannot assign type { { node_type} } to variable \"{var_access}\" of type { {var_type} }"
-                )
-            # Update actual dictionary entry
-            variable_dict_to_update['val'] = self.get_value(node_expression)
+                if (var_type == 'bool' and node_type == 'int'):
+                    variable_dict_to_update['val'] = bool(self.get_value(node_expression))
+                else:
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign type { { node_type} } to variable \"{var_access}\" of type { {var_type} }"
+                    )
+            else:
+                # Update actual dictionary entry
+                variable_dict_to_update['val'] = self.get_value(node_expression)
 
 
         elif node_type == 'var':
@@ -1539,22 +1550,28 @@ class Interpreter(InterpreterBase):
 
             # Check that this variable is of the right type
             if (other_var_type != var_type):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Cannot assign type of variable  { { other_var_type} } of variable \"{node_expression.dict['name']}\" to variable \"{var_access}\" of type { {var_type} }"
-                )
-
-            variable_dict_to_update['val'] = other_var_val['val']
+                if (var_type == 'bool' and other_var_type == 'int'):
+                    variable_dict_to_update['val'] = bool(other_var_val['val'])
+                else:
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign type of variable  { { other_var_type} } of variable \"{node_expression.dict['name']}\" to variable \"{var_access}\" of type { {var_type} }"
+                    )
+            else:
+                variable_dict_to_update['val'] = other_var_val['val']
 
         elif node_type == 'fcall':
             fcall_ret = self.run_fcall(node_expression, scope_stack)
             if (fcall_ret['type'] != var_type):
-                super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Cannot assign fcall return value of type  { { fcall_ret['val']} } to variable \"{var_name}\" of type { {var_type} }"
-                )
-            
-            variable_dict_to_update['val'] = fcall_ret['val']
+                if (var_type == 'bool' and fcall_ret['type'] == 'int'):
+                    variable_dict_to_update['val'] = bool(fcall_ret['val'])
+                else:
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign fcall return value of type  { { fcall_ret['val']} } to variable \"{var_name}\" of type { {var_type} }"
+                    )
+            else:
+                variable_dict_to_update['val'] = fcall_ret['val']
 
         # If not another var, constant, or function call - check all allowable operations for this type
         elif (var_type == 'int'):
