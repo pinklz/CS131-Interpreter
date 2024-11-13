@@ -1001,6 +1001,12 @@ class Interpreter(InterpreterBase):
         
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
+            # Check function was not void
+            if (fcall_ret is None):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempted to use NONE via fcall to \" {node.dict['name']} \" in INTEGER operation"
+                )
             # Check function returned an integer
             if (fcall_ret['type'] != 'int'):
                 super().error(
@@ -1080,6 +1086,12 @@ class Interpreter(InterpreterBase):
         
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
+            # Check function was not void
+            if (fcall_ret is None):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempted to use NONE via fcall to \"{node.dict['name']}\" in STRING operation"
+                )
             # Check function returned a string
             if (fcall_ret['type'] != 'string'):
                 super().error(
@@ -1132,6 +1144,12 @@ class Interpreter(InterpreterBase):
         # Function call
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
+            # Check function was not void
+            if (fcall_ret is None):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempted to use NONE via fcall to \"{node.dict['name']}\" in BOOL operation"
+                )
             # Check function returned an integer
             if (fcall_ret['type'] != 'bool' and fcall_ret['type'] != 'int'):
                 super().error(
