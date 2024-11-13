@@ -369,7 +369,7 @@ class Interpreter(InterpreterBase):
                             ErrorType.TYPE_ERROR,
                             f"Attempted to return a value from a VOID function"
                         )
-                    return
+                    return None
                 
                 if (rval.return_type == None and rval.return_value == None):
                     return_val = self.default_values(expected_return_type)
@@ -383,6 +383,8 @@ class Interpreter(InterpreterBase):
                         ErrorType.TYPE_ERROR,
                         f"Returned value { {rval.return_value} } does not match expected type \"{expected_return_type}\" "
                     )
+                
+                # Otherwise, just return it w/ the value and type that are already set
                 return rval
 
         if expected_return_type == 'void':
@@ -1614,6 +1616,11 @@ class Interpreter(InterpreterBase):
 
             elif node_type == 'fcall':
                 fcall_ret = self.run_fcall(element, func_vars)
+                if (fcall_ret is None):
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot print NONE return type from function \"{element.dict['name']}\""
+                    )
                 fcall_ret_val = fcall_ret['val']
                 if fcall_ret['type'] == 'bool':
                     if fcall_ret_val is True:
