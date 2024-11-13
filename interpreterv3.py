@@ -1297,7 +1297,7 @@ class Interpreter(InterpreterBase):
         op1 = self.eval_op(op1, func_vars)
         op2 = self.eval_op(op2, func_vars)
 
-        # print("\n--In CHECK EQUALITY: \n\tOp1 = ", op1_value, "\tOp2 = ", op2_value)
+        # print("\n--In CHECK EQUALITY: \n\tOp1 = ", op1, "\tOp2 = ", op2)
 
         if op1 is None or op2 is None:
             super().error(
@@ -1311,7 +1311,7 @@ class Interpreter(InterpreterBase):
             print("** ERR: EVAL_OP did not return anything\n___________________________\n")
 
         op1_value = op1['val']
-        op2_value = op1['val']
+        op2_value = op2['val']
 
         op1_type = op1['type']
         op2_type = op2['type']
