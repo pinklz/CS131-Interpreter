@@ -478,6 +478,10 @@ class Interpreter(InterpreterBase):
                     
                     elif (return_exp_type == 'fcall'):
                         return_val_fcall = self.run_fcall( return_expression, func_vars )
+                        # TESTING BELOW
+                        if (return_val_fcall is None):
+                            raise ReturnValue(None, None)
+                        # TESTING ABOVE
                         return_val = return_val_fcall['val']
                         return_type = return_val_fcall['type']
 
