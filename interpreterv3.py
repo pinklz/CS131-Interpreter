@@ -859,7 +859,7 @@ class Interpreter(InterpreterBase):
         # Function call
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
-            if (fcall_ret['type'] != 'int'):
+            if (fcall_ret is None or fcall_ret['type'] != 'int'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in INT_TYPES"
@@ -907,7 +907,7 @@ class Interpreter(InterpreterBase):
         # Function call
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
-            if (fcall_ret['type'] != 'bool' and fcall_ret['type'] != 'int'):
+            if fcall_ret is None or (fcall_ret['type'] != 'bool' and fcall_ret['type'] != 'int'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in BOOL_TYPES"
@@ -948,7 +948,7 @@ class Interpreter(InterpreterBase):
                 # Function call
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
-            if (fcall_ret['type'] != 'string'):
+            if (fcall_ret is None or fcall_ret['type'] != 'string'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in STRING_TYPES"
@@ -957,14 +957,6 @@ class Interpreter(InterpreterBase):
         
         elif (node_type in self.STRING_OPERATIONS):
             return self.run_string_operation(node_expression, scope_stack)
-        # elif (node_type in self.OVERLOADED_OPERATIONS):
-        #     return_val = self.overloaded_operator(node_expression, scope_stack)
-        #     if (type(return_val) != str):
-        #         super().error(
-        #         ErrorType.TYPE_ERROR,
-        #         f"INSIDE STRING_TYPES: Cannot perform non-string operation { {node_type} } and return STRING value"
-        #     )
-        #     return return_val
         
         else:
             super().error(
