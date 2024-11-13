@@ -739,11 +739,10 @@ class Interpreter(InterpreterBase):
         elif (condition_type in self.INT_OPERATIONS):
             eval_statements = bool(self.run_int_operation(condition, func_vars))
         
-        # CHECK : IF none of these, is likely an integer expression
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Unrecognized expression type { {condition.elem_type} } for 'if' condition: { {condition} }"
+                    f"Unrecognized expression type { {condition_type} } for 'if' condition: { {condition} }"
                 )
 
         if (eval_statements is not True and eval_statements is not False):
@@ -830,26 +829,43 @@ class Interpreter(InterpreterBase):
 
 
         # Get operator values 
-        op1_value = self.eval_op(op1, func_vars)
-        op2_value = self.eval_op(op2, func_vars)
+        op1 = self.eval_op(op1, func_vars)
+        op2 = self.eval_op(op2, func_vars)
 
-        # Check that operands are of the same type
-        if ( type(op1_value) != type(op2_value)):
+        if op1 is None or op2 is None:
             super().error(
                 ErrorType.TYPE_ERROR,
-                f"Attempted to use {node_type} on different types { type(op1_value)} and { type(op2_value)}"
+                f"Attempted to use NONE in equality comparison"
+            )
+
+        same = NO_VALUE_DEFINED
+
+        if (op1 is NO_VALUE_DEFINED) or (op2 is NO_VALUE_DEFINED):
+            print("** ERR: EVAL_OP did not return anything\n___________________________\n")
+
+        op1_value = op1['val']
+        op2_value = op2['val']
+
+        op1_type = op1['type']
+        op2_type = op2['type']
+
+        # Check that operands are of the same type
+        if ( op1_type != op2_type):
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use {node_type} on different types { op1_type } and { op2_type }"
             )
 
         if node_type == '+':
             # '+' is defined for INT and STRING
-            if type(op1_value) == int:
+            if op1_type == 'int':
                 return self.run_int_operation(node, func_vars)
-            if type(op1_value) == str:
+            if op1_type == 'string':
                 return self.run_string_operation(node, func_vars)
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"No {node_type} operation defined for { type(op1_value) }\t(Overloaded Op function)"
+                    f"No {node_type} operation defined for { op1_type }\t(Overloaded Op function)"
                 )
     
     ''' ---- Operations Allowed for Specific Types ---- '''
@@ -926,7 +942,12 @@ class Interpreter(InterpreterBase):
         # Function call
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
-            if fcall_ret is None or (fcall_ret['type'] != 'bool' and fcall_ret['type'] != 'int'):
+            if fcall_ret is None:
+                super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type NONE in BOOL_TYPES"
+                    )
+            if (fcall_ret['type'] != 'bool' and fcall_ret['type'] != 'int'):
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in BOOL_TYPES"
@@ -934,7 +955,6 @@ class Interpreter(InterpreterBase):
             return bool(fcall_ret['val'])
 
         # Integer Operation to be computed
-        # TODO: Coercion allowed here
         elif (node_type in self.INT_OPERATIONS):
             return_val =  self.run_int_operation(node_expression, scope_stack)
             return bool(return_val)
@@ -967,7 +987,12 @@ class Interpreter(InterpreterBase):
                 # Function call
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)
-            if (fcall_ret is None or fcall_ret['type'] != 'string'):
+            if (fcall_ret is None):     # Void function
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type NONE in STRING_TYPES"
+                )
+            if fcall_ret['type'] != 'string':
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Cannot use FCALL to \"{node_expression.dict['name']} \" w/ return type { { fcall_ret['type'] }} in STRING_TYPES"
@@ -1222,41 +1247,43 @@ class Interpreter(InterpreterBase):
 
     ''' ---- Comparison Operations ---- '''
     def eval_op(self, node, func_vars):
+        # Return dictionary of type + value
             op_type = node.elem_type
 
             # Get variable value
             if op_type == 'var':
                 ret_val = self.get_variable_value(node, func_vars)
-                return ret_val['val']
+                return ret_val
 
             # If value type
             if op_type == 'int' or op_type == 'string' or op_type == 'bool':
-                return self.get_value(node)
+                return {'type':op_type, 'val': self.get_value(node)}
             
             if op_type == 'fcall':
                 fcall_ret = self.run_fcall(node, func_vars)
                 if (fcall_ret is None):
                     return None
                 # if decide to return dictionary here, can get type with fcall_ret['type']
-                return fcall_ret['val']
+                return fcall_ret
             
             if op_type == 'nil':
-                return Element("nil")
+                return {'type':'nil', 'val': Element("nil")}
             
             if op_type in self.OVERLOADED_OPERATIONS:
-                return self.overloaded_operator(node, func_vars)
+                val = self.overloaded_operator(node, func_vars)
+                return {'type': str(type(val)), 'val': val}
             
             if op_type in self.INT_OPERATIONS:
-                return self.run_int_operation(node, func_vars)
+                return {'type':'int', 'val':self.run_int_operation(node, func_vars)}
             
             if op_type in self.BOOL_OPERATIONS:
-                return self.run_bool_operation(node, func_vars)
+                return {'type':'bool', 'val':self.run_bool_operation(node, func_vars)}
             
             if op_type in self.EQUALITY_COMPARISONS:
-                return self.check_equality(node, func_vars)
+                return {'type':'bool', 'val': self.check_equality(node, func_vars)}
             
             if op_type in self.INTEGER_COMPARISONS:
-                return self.integer_compare(node, func_vars)
+                return {'type':'bool', 'val': self.integer_compare(node, func_vars)}
 
             return NO_VALUE_DEFINED
             
@@ -1283,43 +1310,46 @@ class Interpreter(InterpreterBase):
 
         
         # If both are bool
-        if ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
-            same = True
-        elif ( (op1_value is True) and (op2_value is False)) or ((op1_value is False) and (op2_value is True)):
-            same = False
+        if (op1_value['type'] == 'bool' and op2_value['type'] == 'bool'):
+            if op1_value['val'] is True and op2_value['val'] is True:
+                same = True
+            elif op1_value['val'] is False and op2_value['val'] is False:
+                same = True
+            else:
+                same = False
 
-        op1_type = type(op1_value)
-        op2_type = type(op2_value)
+        op1_type = op1_value['type']
+        op2_type = op2_value['type']
 
         # NIL check - only structs can be compared to nil
-        if op1_type == Element and op1_value.elem_type == 'nil':
-            if op2_type == Element and op2_value.elem_type == 'nil':
+        if op1_type == 'nil':
+            if op2_type == 'nil':
                 same = True 
-            elif op2_type == self.BrewinStruct:
-                same = (op1_value == op2_value)     # Is False
+            elif op2_type in self.defined_structs:
+                same = (op1_value['val'] == op2_value['val'])     # Is False
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Attempt to compare NIL to non-struct element { {op2_value} }"
+                    f"Attempt to compare NIL to non-struct element { {op2_value['val']} }"
                 )
-        elif op2_type == Element and op2_value.elem_type == 'nil':
+        elif op2_type == 'nil':
             # Should already be checked if they're both nil, don't need to check if op1 is nil here
-            if op1_type == self.BrewinStruct:
-                same = (op2_value == op1_value)
+            if op1_type in self.defined_structs:
+                same = (op2_value['val'] == op1_value['val'])
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Attempt to compare NIL to non-struct element { {op1_value} }"
+                    f"Attempt to compare NIL to non-struct element { {op1_value['val']} }"
                 )
 
         elif (op1_type != op2_type):
-            if (op1_type == bool and op2_type == int) or (op1_type == int and op2_type == bool):
-                same = (bool(op1_value) == bool(op2_value))
+            if (op1_type == 'bool' and op2_type == 'int') or (op1_type == 'int' and op2_type == 'bool'):
+                same = ( bool(op1_value['val']) == bool (op2_value['val']))
             else:
                 same = False
 
         else:
-            same = (op1_value == op2_value)
+            same = (op1_value['val'] == op2_value['val'])
 
         # Actually perform equality check
         if node_type == '==':
