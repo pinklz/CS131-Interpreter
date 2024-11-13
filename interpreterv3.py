@@ -1200,9 +1200,85 @@ class Interpreter(InterpreterBase):
             
             if op_type in self.INTEGER_COMPARISONS:
                 return self.integer_compare(node, func_vars)
+
+            return NO_VALUE_DEFINED
             
 
-    def check_equality(self, node, func_vars):   
+    def check_equality(self, node, func_vars):
+        node_type = node.elem_type
+        op1 = node.dict['op1']
+        op2 = node.dict['op2']
+
+        # Get operator values 
+        op1_value = self.eval_op(op1, func_vars)
+        op2_value = self.eval_op(op2, func_vars)
+
+        if op1_value is None or op2_value is None:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Attempted to use NONE in equality comparison"
+            )
+
+        same = NO_VALUE_DEFINED
+
+        if (op1_value is NO_VALUE_DEFINED) or (op2_value is NO_VALUE_DEFINED):
+            print("** ERR: EVAL_OP did not return anything\n___________________________\n")
+
+        
+        # If both are bool
+        if ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
+            same = True
+        elif ( (op1_value is True) and (op2_value is False)) or ((op1_value is False) and (op2_value is True)):
+            same = False
+
+        op1_type = type(op1_value)
+        op2_type = type(op2_value)
+
+        # NIL check - only structs can be compared to nil
+        if op1_type == Element and op1_value.elem_type == 'nil':
+            if op2_type == Element and op2_value.elem_type == 'nil':
+                same = True 
+            elif op2_type == self.BrewinStruct:
+                same = (op1_value == op2_value)     # Is False
+            else:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempt to compare NIL to non-struct element { {op2_value} }"
+                )
+        elif op2_type == Element and op2_value.elem_type == 'nil':
+            # Should already be checked if they're both nil, don't need to check if op1 is nil here
+            if op1_type == self.BrewinStruct:
+                same = (op2_value == op1_value)
+            else:
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Attempt to compare NIL to non-struct element { {op1_value} }"
+                )
+
+        elif (op1_type != op2_type):
+            if (op1_type == bool and op2_type == int) or (op1_type == int and op2_type == bool):
+                same = (bool(op1_value) == bool(op2_value))
+            else:
+                same = False
+
+        else:
+            same = (op1_value == op2_value)
+
+        # Actually perform equality check
+        if node_type == '==':
+            return same
+        elif node_type == '!=':
+            return not same
+        else:
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Unrecognized equality operation of type {node_type}"
+            )
+
+
+
+
+    def check_equality2(self, node, func_vars):   
         if (self.trace_output == True):
             print("CHECKING EQUALITY: ", node.elem_type)
 
