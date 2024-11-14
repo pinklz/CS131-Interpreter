@@ -12,7 +12,6 @@ NO_VALUE_DEFINED = object()     # This line is from ChatGPT: wanted a way to def
 
 
 class Interpreter(InterpreterBase):
-    program_vars = {}
     defined_functions = {}      # should map function name to list of func nodes (for overloading)
     defined_structs = {}
 
@@ -101,7 +100,7 @@ class Interpreter(InterpreterBase):
             allowable_types.append(struct_name)
             # Check all types for fields are valid
             for field in struct.dict['fields']:
-                if field.dict['var_type'] not in allowable_types:
+                if field.dict['var_type'] not in allowable_types or field.dict['var_type'] == 'void':
                     super().error(
                         ErrorType.TYPE_ERROR,
                         f"Invalid type { {field.dict['var_type']} } in field for \"{struct_name}\""
