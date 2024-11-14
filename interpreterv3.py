@@ -1622,7 +1622,7 @@ class Interpreter(InterpreterBase):
             super().output(prompt_string)
             user_input = super().get_input()
 
-        return int(user_input)
+        return {'type': 'int', 'val': int(user_input)}
 
     ''' ---- INPUTIS function ---- '''
     def inputs(self, prompt=[]):
@@ -1633,7 +1633,7 @@ class Interpreter(InterpreterBase):
             super().output(prompt_string)
             user_input = super().get_input()
 
-        return str(user_input)
+        return {'type': 'string', 'val': str(user_input)}
 
     ''' ---- PRINT function ---- '''
     def printout(self, func_vars, lst=[]):
