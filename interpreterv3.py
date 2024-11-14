@@ -51,7 +51,6 @@ class Interpreter(InterpreterBase):
                         f"Cannot initialize struct field of type \"{field_type}\" b/c it doesn't exist"
                     )
 
-                # TODO: don't allow duplicate field names
                 self.struct_fields[field_name] = {'type':field_type, 'val':interpreter.default_values(field_type)}
             
         def get_field(self, field):
@@ -100,6 +99,13 @@ class Interpreter(InterpreterBase):
         for struct in self.ast.dict['structs']:
             struct_name = struct.dict['name']
             allowable_types.append(struct_name)
+            # Check all types for fields are valid
+            for field in struct.dict['fields']:
+                if field.dict['var_type'] not in allowable_types:
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Invalid type { {field.dict['var_type']} } in field for \"{struct_name}\""
+                    )
             self.defined_structs[struct_name] = struct
         
 
@@ -1512,7 +1518,7 @@ class Interpreter(InterpreterBase):
         if scope_to_update is NO_VALUE_DEFINED:
             super().error(
                 ErrorType.NAME_ERROR,
-                f"Variable { {var_name} } not found in any scope"
+                f"Struct variable { {var_name} } not found in any scope"
             )
 
         if (scope_to_update[var_name]['type'] not in self.defined_structs):
@@ -1549,7 +1555,6 @@ class Interpreter(InterpreterBase):
 
 
         elif node_type == 'var':
-            # TODO: different for structs, need to use same object ref
             other_var_val = self.get_variable_value(node_expression, scope_stack)
             other_var_type = other_var_val['type']
 
