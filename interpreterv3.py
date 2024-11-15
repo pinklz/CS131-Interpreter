@@ -689,6 +689,8 @@ class Interpreter(InterpreterBase):
                     ErrorType.TYPE_ERROR,
                     f"Unrecognized expression \"{node_type}\" in variable assignment for {var_name}"
                 ) 
+            
+        return None
 
 
     ''' ---- If Statement ---- '''
@@ -775,6 +777,8 @@ class Interpreter(InterpreterBase):
         # Pop off new scope's variables
             # yup pop off
         scope_stack.pop()
+
+        return None
         
     ''' --- For Loop ---- '''
     def run_for_loop(self, node, scope_stack):
@@ -811,6 +815,8 @@ class Interpreter(InterpreterBase):
 
             # Check condition again
             eval_condition = self.check_condition(condition, scope_stack)
+
+        return None
 
 
 
