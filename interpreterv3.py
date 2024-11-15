@@ -462,6 +462,12 @@ class Interpreter(InterpreterBase):
                         return_val_all = self.get_variable_value(return_expression, func_vars)
                         return_val = return_val_all['val']
                         return_type = return_val_all['type']
+
+                    # If new struct
+                    elif (return_exp_type == 'new'):
+                        return_type = str(return_expression.dict['var_type'])
+                        struct_OR = self.BrewinStruct(self, return_expression)
+                        return_val = struct_OR
                     
                     # If using an OVERLOADED OPERATOR 
                     elif (return_exp_type in self.OVERLOADED_OPERATIONS):
