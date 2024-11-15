@@ -51,6 +51,9 @@ class Interpreter(InterpreterBase):
                     )
 
                 self.struct_fields[field_name] = {'type':field_type, 'val':interpreter.default_values(field_type)}
+        
+        def get_fields(self):
+            return self.struct_fields
             
         def get_field(self, field):
             if (field not in self.struct_fields):
@@ -1507,7 +1510,15 @@ class Interpreter(InterpreterBase):
                     ErrorType.TYPE_ERROR,
                     f"Attempted to use dot operator on NON-STRUCT variable { {field_access} } of type \"{type(accessing_from)}\""
                 )
-            struct_val_dict = accessing_from.get_field(field_access)
+
+            all_fields = accessing_from.get_fields()
+            if (field_access not in all_fields):
+                super().error(
+                    ErrorType.NAME_ERROR,
+                    f"Field \"{field_access}\" isn't defined for struct { {var_name} }"
+                )
+            struct_val_dict = all_fields[field_access]
+            # struct_val_dict = accessing_from.get_field(field_access)
             # print("\tAfter calling 'get_field', this is what was returned\n\t", struct_val_dict)
             returned_value = struct_val_dict['val']
             accessing_from = returned_value
