@@ -270,6 +270,11 @@ class Interpreter(InterpreterBase):
 
             elif (arg_type == 'fcall'):
                 fcall_ret = self.run_fcall( arg, calling_func_vars)
+                if (fcall_ret is None):
+                    super().error(
+                            ErrorType.TYPE_ERROR,
+                            f"Cannot assign type NONE to PARAMETER \"{param.dict['name']}\" of type { {param_type} } via FUNCTION CALL RETURN VALUE"
+                        )
                 if (fcall_ret['type'] != param_type):
                     if (param_type == 'bool' and fcall_ret['type'] == 'int'):
                         func_arg_values.append( {'type': 'bool', 'val': bool(fcall_ret['val'])} )
