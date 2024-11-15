@@ -1617,6 +1617,12 @@ class Interpreter(InterpreterBase):
             variable_dict_to_update['val'] = Element("nil")
 
         elif (node_type == 'new'):
+            struct_type = node_expression.dict['var_type']
+            if (struct_type != var_type):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign non-struct variable \"{var_access}\" to STRUCT of type { {struct_type} } value"
+                )
             struct_OR = self.BrewinStruct(self, node_expression)
             variable_dict_to_update['val'] = struct_OR
         else:
