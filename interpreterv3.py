@@ -1235,6 +1235,12 @@ class Interpreter(InterpreterBase):
         if node_type in self.INT_OPERATIONS:
             return bool(self.run_int_operation(node, func_vars))
         
+        if node_type in self.EQUALITY_COMPARISONS:
+            return self.check_equality(node, func_vars)
+        
+        if node_type in self.INTEGER_COMPARISONS:
+            return self.integer_compare(node, func_vars)
+        
         allowable_types = ['bool', 'var', 'fcall', 'int'] + self.BOOL_OPERATIONS + self.EQUALITY_COMPARISONS + self.INTEGER_COMPARISONS + self.INT_OPERATIONS
         
         # Unary Boolean NOT
