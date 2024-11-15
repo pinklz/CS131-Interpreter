@@ -736,26 +736,19 @@ class Interpreter(InterpreterBase):
                 )
 
         elif (condition_type in self.EQUALITY_COMPARISONS):
-            eval_statements = self.check_equality(condition, func_vars)
+            return self.check_equality(condition, func_vars)
         elif (condition_type in self.INTEGER_COMPARISONS):
-            eval_statements = self.integer_compare(condition, func_vars)
+            return self.integer_compare(condition, func_vars)
         elif (condition_type in self.BOOL_OPERATIONS):
-            eval_statements = self.run_bool_operation(condition, func_vars)
+            return self.run_bool_operation(condition, func_vars)
         elif (condition_type in self.INT_OPERATIONS):
-            eval_statements = bool(self.run_int_operation(condition, func_vars))
+            return bool(self.run_int_operation(condition, func_vars))
         
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
                     f"Unrecognized expression type { {condition_type} } for 'if' condition: { {condition} }"
                 )
-
-        if (eval_statements is not True and eval_statements is not False):
-            super().error(
-                ErrorType.TYPE_ERROR,
-                f"Condition did not evaluate to boolean value { { eval_statements } }"
-            )
-        return eval_statements
 
     def evaluate_if(self, node, scope_stack):
         if self.trace_output:
@@ -1712,3 +1705,4 @@ class Interpreter(InterpreterBase):
                     string_to_output += str(fcall_ret_val)
 
         super().output(string_to_output)
+        return None
