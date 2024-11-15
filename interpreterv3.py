@@ -687,6 +687,12 @@ class Interpreter(InterpreterBase):
         
         # Instantiating new struct object
         elif (node_type == 'new'):
+            struct_type = node_expression.dict['var_type']
+            if (struct_type != scope_to_update[var_name]['type']):
+                super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Cannot assign non-struct variable \"{var_name}\" to STRUCT of type { {struct_type} } value"
+                )
             struct_OR = self.BrewinStruct(self, node_expression)
             scope_to_update[var_name]['val'] = struct_OR
         else:
