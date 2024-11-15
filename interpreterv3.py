@@ -1575,6 +1575,11 @@ class Interpreter(InterpreterBase):
 
         elif node_type == 'fcall':
             fcall_ret = self.run_fcall(node_expression, scope_stack)
+            if fcall_ret is None:
+                super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign fcall return value of type NONE to variable \"{var_name}\" of type { {var_type} }"
+                    )
             if (fcall_ret['type'] != var_type):
                 if (var_type == 'bool' and fcall_ret['type'] == 'int'):
                     variable_dict_to_update['val'] = bool(fcall_ret['val'])
