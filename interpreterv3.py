@@ -305,6 +305,11 @@ class Interpreter(InterpreterBase):
             elif(arg_type == 'new'):
                 # Create new STRUCT + pass in dictionary mapping type to the obj ref
                 struct_type = arg.dict['var_type']
+                if (struct_type != param_type):
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Cannot assign different STRUCT type {struct_type} to parameter \"{param_type}\" "
+                    )
                 struct_OR = self.BrewinStruct(self, arg)
                 func_arg_values.append({'type':struct_type, 'val':struct_OR})
 
