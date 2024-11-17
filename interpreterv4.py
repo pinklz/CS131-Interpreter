@@ -53,7 +53,7 @@ class Interpreter(InterpreterBase):
             # Identify main_node to run aftter
             if (func.dict['name'] == 'main'):
                 main_node = func
-        if (main_node == NO_VALUE_DEFINED):
+        if (main_node is NO_VALUE_DEFINED):
             super().error(
                 ErrorType.NAME_ERROR,
                 "No MAIN node found in program"
@@ -92,7 +92,7 @@ class Interpreter(InterpreterBase):
             return self.printout(scope_stack, node_dict['args'])
         ''' END OF SEPARATE HANDLING '''
 
-        return None
+        return NO_VALUE_DEFINED
 
 
     ''' ---- HANDLE fcall ---- '''
@@ -113,7 +113,7 @@ class Interpreter(InterpreterBase):
 
         # Check if Print, Inputi, or Inputs
         builtin = self.check_builtin_funcs(func_node, calling_func_vars)
-        if builtin != None:
+        if builtin is not NO_VALUE_DEFINED:
             return builtin
 
 
@@ -126,14 +126,14 @@ class Interpreter(InterpreterBase):
 
         # Based on the provided number of arguments in the function call
             # Identify the correct (possibly overloaded) function definition to run
-        func_to_run = None
+        func_to_run = NO_VALUE_DEFINED
         defined_funcs_found = self.defined_functions[func_name]
         for func in defined_funcs_found:
             args = func.dict['args']
             if len(func_args) == len ( args ):
                 func_to_run = func
 
-        if (func_to_run == None):
+        if (func_to_run is NO_VALUE_DEFINED):
             # Wrong number of arguments for this function
             super().error(
                 ErrorType.NAME_ERROR, 
@@ -146,33 +146,34 @@ class Interpreter(InterpreterBase):
             # if variable - check calling_func_args
             # if op, call run_operation
         for arg in func_args:
+            arg_type = arg.elem_type
             # If it is already a value, add that value
-            if arg.elem_type in ['string', 'int', 'bool']:
+            if arg_type in ['string', 'int', 'bool']:
                 func_arg_values.append( self.get_value (arg) )
-            elif arg.elem_type == 'var':
+            elif arg_type == 'var':
                 # Check variable is defining within calling function + get value if so
                 func_arg_values.append( self.get_variable_value (arg, calling_func_vars))
-            
+            elif arg_type == 'fcall':
+                # TODO: check for NONE return
+                func_arg_values.append( self.run_fcall(arg, calling_func_vars) )
             # Passed in EXPRESION
                 # Overloaded operation
-            elif arg.elem_type in self.OVERLOADED_OPERATIONS:
+            elif arg_type in self.OVERLOADED_OPERATIONS:
                 func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
                 # Integer operation
-            elif arg.elem_type in self.INT_OPERATIONS:
+            elif arg_type in self.INT_OPERATIONS:
                 func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
                 # Boolean operation
-            elif arg.elem_type in self.BOOL_OPERATIONS:
+            elif arg_type in self.BOOL_OPERATIONS:
                 func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
                 # Equality comparison
-            elif arg.elem_type in self.EQUALITY_COMPARISONS:
+            elif arg_type in self.EQUALITY_COMPARISONS:
                 func_arg_values.append( self.check_equality (arg, calling_func_vars) )
                 # Integer comparison
-            elif arg.elem_type in self.INTEGER_COMPARISONS:
+            elif arg_type in self.INTEGER_COMPARISONS:
                 func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
-            elif arg.elem_type == 'nil':
+            elif arg_type == 'nil':
                 func_arg_values.append( arg )
-            elif arg.elem_type == 'fcall':
-                func_arg_values.append( self.run_fcall(arg, calling_func_vars) )
             else:
                 func_arg_values.append(arg)
                 # print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
@@ -343,7 +344,7 @@ class Interpreter(InterpreterBase):
         var_name = node_dict['name']
 
 
-        scope_to_update = None
+        scope_to_update = NO_VALUE_DEFINED
 
         # Traverse stack in reverse order
         for scope in scope_stack[::-1]:
@@ -354,7 +355,7 @@ class Interpreter(InterpreterBase):
                 break
 
         # If not found in any scope
-        if scope_to_update == None:
+        if scope_to_update is NO_VALUE_DEFINED:
             super().error(
                 ErrorType.NAME_ERROR,
                 f"Variable { {var_name} } not found in any scope"
@@ -426,18 +427,22 @@ class Interpreter(InterpreterBase):
 
     ''' ---- If Statement ---- '''
     def check_condition(self, condition, func_vars):
+        # TODO just return true or false instead of using eval_statements?
+            # need to confirm they return T/F from operations inside their own functions
+
+        condition_type = condition.elem_type
         
         # If constant value
-        if (condition.elem_type == 'bool'):
+        if (condition_type == 'bool'):
             eval_statements =  self.get_value(condition)
-        elif (condition.elem_type == 'int' or condition.elem_type == 'string' or condition.elem_type == 'nil'):
+        elif (condition_type == 'int' or condition_type == 'string' or condition_type == 'nil'):
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Cannot evaluate STRING or INT or NIL in 'if' statement condition"
             )
         
         # If variable value
-        elif (condition.elem_type == 'var'):
+        elif (condition_type == 'var'):
             # Check variable is defined
             val = self.get_variable_value(condition, func_vars)
 
@@ -450,7 +455,7 @@ class Interpreter(InterpreterBase):
                 )
 
         # If fcall
-        elif (condition.elem_type == 'fcall'):
+        elif (condition_type == 'fcall'):
             fcall_return = self.run_fcall(condition, func_vars)
             if fcall_return is True or fcall_return is False:
                 eval_statements = fcall_return
@@ -460,18 +465,18 @@ class Interpreter(InterpreterBase):
                     f"Cannot evaluate STRING or INT (or nil?) in 'if' statement condition, attempted via fcall to {condition.dict['name']}"
                 )
 
-        elif (condition.elem_type in self.EQUALITY_COMPARISONS):
+        elif (condition_type in self.EQUALITY_COMPARISONS):
             eval_statements = self.check_equality(condition, func_vars)
-        elif (condition.elem_type in self.INTEGER_COMPARISONS):
+        elif (condition_type in self.INTEGER_COMPARISONS):
             eval_statements = self.integer_compare(condition, func_vars)
-        elif (condition.elem_type in self.BOOL_OPERATIONS):
+        elif (condition_type in self.BOOL_OPERATIONS):
             eval_statements = self.run_bool_operation(condition, func_vars)
         
         # CHECK : IF none of these, is likely an integer expression
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
-                    f"Unrecognized expression type { {condition.elem_type} } for 'if' condition: { {condition} }"
+                    f"Unrecognized expression type { {condition_type} } for 'if' condition: { {condition} }"
                 )
 
         if (eval_statements is not True and eval_statements is not False):
@@ -557,6 +562,8 @@ class Interpreter(InterpreterBase):
         # Get operator values 
         op1_value = self.eval_op(op1, func_vars)
         op2_value = self.eval_op(op2, func_vars)
+
+        # TODO: I think? Add NONE check to make sure not using a void function in operation
 
         # Check that operands are of the same type
         if ( type(op1_value) != type(op2_value)):
@@ -746,6 +753,12 @@ class Interpreter(InterpreterBase):
 
             return fcall_ret
         
+        if node_type in self.EQUALITY_COMPARISONS:
+            return self.check_equality(node, func_vars)
+        if node_type in self.INTEGER_COMPARISONS:
+            return self.integer_compare(node, func_vars)
+
+
         allowable_types = ['bool', 'var', 'fcall'] + self.BOOL_OPERATIONS + self.EQUALITY_COMPARISONS + self.INTEGER_COMPARISONS
         
         # Unary Boolean NOT
@@ -798,6 +811,7 @@ class Interpreter(InterpreterBase):
                 return self.get_value(node)
             
             if op_type == 'fcall':
+                # TODO: check return None
                 return self.run_fcall(node, func_vars)
             
             if op_type == 'nil':
@@ -815,6 +829,11 @@ class Interpreter(InterpreterBase):
             if op_type in self.EQUALITY_COMPARISONS:
                 return self.check_equality(node, func_vars)
             
+            if op_type in self.INTEGER_COMPARISONS:
+                return self.integer_compare(node, func_vars)
+            
+            return NO_VALUE_DEFINED
+            
 
     def check_equality(self, node, func_vars):   
         if (self.trace_output == True):
@@ -828,7 +847,9 @@ class Interpreter(InterpreterBase):
         op1_value = self.eval_op(op1, func_vars)
         op2_value = self.eval_op(op2, func_vars)
 
-        same = None
+        # TODO: check if return NO_VALUE_DEFINED
+
+        same = None     # TODO: could also change this to NVD
 
 
         # If both are bool
@@ -837,6 +858,7 @@ class Interpreter(InterpreterBase):
         elif ( (op1_value is True) and (op2_value is False)) or ((op1_value is False) and (op2_value is True)):
             same = False
 
+        # TODO TODO: change this try/except statement to what's in interpreterv3
         
         # If different types
         elif ( type(op1_value) != type(op2_value) ):
