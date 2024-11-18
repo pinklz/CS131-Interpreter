@@ -887,6 +887,7 @@ class Interpreter(InterpreterBase):
 
 
         # Actually perform equality check
+        # TODO: should make sure that SAME is True or False before returning, in case it was never set
         if node_type == '==':
             return same
         elif node_type == '!=':
