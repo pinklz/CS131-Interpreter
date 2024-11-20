@@ -376,6 +376,9 @@ class Interpreter(InterpreterBase):
         # Cache calcuated value in dictionary
         self.run_assign(mapping_element, scope_stack)
 
+        # Actually return the value
+        return actual_value
+
 
     ''' ---- Running Statement Types ---- '''
     # VARDEF
@@ -660,6 +663,8 @@ class Interpreter(InterpreterBase):
         node_type = node.elem_type
         op1 = node.dict['op1']
         op2 = node.dict['op2']
+
+        # TODO: fix this function, the eval_op runs function calls and then they are run again in the actual operation - need to cut down to ONE call
 
         # Get operator values 
         op1_value = self.eval_op(op1, func_vars)
