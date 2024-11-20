@@ -527,6 +527,10 @@ class Interpreter(InterpreterBase):
         # If fcall
         elif (condition_type == 'fcall'):
             fcall_return = self.run_fcall(condition, func_vars)
+
+            # Actually evaluate return expression
+            rcall_return = self.evaluate_expression(fcall_return)
+            
             if fcall_return is True or fcall_return is False:
                 eval_statements = fcall_return
             else:
@@ -776,12 +780,13 @@ class Interpreter(InterpreterBase):
         
         # Function call
         if node_type == 'fcall':
+            fcall_ret = self.run_fcall(node, func_vars)
             # Actually evaluate function call return expression
             fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
 
             if (self.trace_output == True):
                 print("EXPRESSION USES A FUNCTION CALL")
-            return self.run_fcall(node, func_vars)
+            return fcall_ret
 
         # String concatenation
         if node_type == '+':
@@ -1116,7 +1121,11 @@ class Interpreter(InterpreterBase):
                     string_to_output += "false"
 
             elif node_type == 'fcall':
-                string_to_output += str(self.run_fcall(element, func_vars))
+                fcall_ret = self.run_fcall(element, func_vars)
+
+                # Actually evaluate function return statement
+                fcall_ret = self.evaluate_expression(fcall_ret)
+                string_to_output += str(fcall_ret)
 
         super().output(string_to_output)
         return Element("nil")
