@@ -353,6 +353,42 @@ class Interpreter(InterpreterBase):
                     f"Unrecognized statement of type {node_type}"
                 )
 
+
+    def evaluate_expression(self, node_expression, scope_stack):
+        # Node expression should be an element, with an expression node
+        node_type = node_expression.elem_type
+
+        actual_value = NO_VALUE_DEFINED
+
+        if (node_type in ['int', 'string', 'bool']):
+            actual_value =  self.get_value(node_expression)
+        
+        # TODO: variable bruh how do I do that
+
+        elif (node_type == 'fcall'):
+            fcall_ret = self.run_fcall(node_expression, scope_stack)        # returns 
+            # print("Function returned = ", fcall_ret)
+            actual_value = self.evaluate_expression(fcall_ret, scope_stack)
+            # actual_value = self.run_fcall(node_expression, scope_stack)
+        
+        elif (node_type in self.OVERLOADED_OPERATIONS):
+            actual_value =  self.overloaded_operator(node_expression, scope_stack)
+        
+        elif (node_type in self.INT_OPERATIONS):
+            actual_value = self.run_int_operation(node_expression, scope_stack)
+        
+        elif (node_type in self.BOOL_OPERATIONS):
+            actual_value = self.run_bool_operation(node_expression, scope_stack)
+        
+        elif (node_type in self.EQUALITY_COMPARISONS):
+            actual_value = self.check_equality(node_expression, scope_stack)
+        
+        elif (node_type in self.INTEGER_COMPARISONS):
+            actual_value = self.integer_compare(node_expression, scope_stack)
+
+        return actual_value
+
+
     def evaluate_var(self, node, scope_stack):      # returns primitive VALUE in variable
 
         var_name = node.dict['name']
@@ -372,38 +408,15 @@ class Interpreter(InterpreterBase):
         if (node_type == 'var'):
             print("** NAWr have not done variable-to-variable assignments yet")
 
-        # If value --> return value
-        if (node_type in ['int', 'string', 'bool']):
-            value_type = node_type
-            actual_value =  self.get_value(node_expression)
-        
-        # TODO: variable bruh how do I do that
-
-        elif (node_type == 'fcall'):
-            actual_value = self.run_fcall(node_expression, scope_stack)
-        
-        elif (node_type in self.OVERLOADED_OPERATIONS):
-            actual_value =  self.overloaded_operator(node_expression, scope_stack)
-        
-        elif (node_type in self.INT_OPERATIONS):
-            actual_value = self.run_int_operation(node_expression, scope_stack)
-        
-        elif (node_type in self.BOOL_OPERATIONS):
-            actual_value = self.run_bool_operation(node_expression, scope_stack)
-        
-        elif (node_type in self.EQUALITY_COMPARISONS):
-            actual_value = self.check_equality(node_expression, scope_stack)
-        
-        elif (node_type in self.INTEGER_COMPARISONS):
-            actual_value = self.integer_compare(node_expression, scope_stack)
+        actual_value = self.evaluate_expression(node_expression, scope_stack)
         
         # Get value type from returned value type
             # to be used in Element(type)
-        if (value_type is NO_VALUE_DEFINED and (actual_value is True or actual_value is False)):
+        if (actual_value is True or actual_value is False):
             value_type = 'bool'
-        elif (value_type is NO_VALUE_DEFINED and type(actual_value) == int):
+        elif (type(actual_value) == int):
             value_type = 'int'
-        elif (value_type is NO_VALUE_DEFINED and type(actual_value) == str):
+        elif (type(actual_value) == str):
             value_type = 'string'
 
         # print("+++ Current actual_value = ", actual_value)
@@ -501,7 +514,7 @@ class Interpreter(InterpreterBase):
         # If variable value
         elif (condition_type == 'var'):
             # Check variable is defined
-            val = self.get_variable_assignment(condition, func_vars)
+            val = self.evaluate_var(condition, func_vars)
 
             if (val is True) or (val is False):
                 eval_statements = val
@@ -675,6 +688,10 @@ class Interpreter(InterpreterBase):
         
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
+            
+            # Actually evaluate function call return expression
+            fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
+
             # print("\tPassed in function call with return value ", fcall_ret)
             if not (isinstance(fcall_ret, int)) or fcall_ret is True or fcall_ret is False:
                 super().error(
@@ -759,6 +776,9 @@ class Interpreter(InterpreterBase):
         
         # Function call
         if node_type == 'fcall':
+            # Actually evaluate function call return expression
+            fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
+
             if (self.trace_output == True):
                 print("EXPRESSION USES A FUNCTION CALL")
             return self.run_fcall(node, func_vars)
@@ -803,6 +823,9 @@ class Interpreter(InterpreterBase):
         # Function call
         if node_type == 'fcall':
             fcall_ret = self.run_fcall(node, func_vars)
+
+            # Actually evaluate function call return expression
+            fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
 
             if fcall_ret is not True and fcall_ret is not False:
                 super().error(
