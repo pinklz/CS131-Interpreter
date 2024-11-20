@@ -316,8 +316,6 @@ class Interpreter(InterpreterBase):
 
         var_name = node.dict['name']
 
-        # TODO: store result in scope_stack as VAL element
-
         # print(f"\n--- in EVALUATE VAR\n\tNode { {var_name} }")
         node_expression = self.get_variable_assignment(node, scope_stack)
         node_type = node_expression.elem_type
@@ -329,6 +327,9 @@ class Interpreter(InterpreterBase):
         mapping_element = Element("=")
         actual_value = NO_VALUE_DEFINED
         value_type = NO_VALUE_DEFINED
+
+        if (node_type == 'var'):
+            print("** NAWr have not done variable-to-variable assignments yet")
 
         # If value --> return value
         if (node_type in ['int', 'string', 'bool']):
@@ -438,96 +439,6 @@ class Interpreter(InterpreterBase):
 
         # TODO: figure out how to store variable values w/o actually evaluating the expression
             # but can't look up variable values until x is called (ie if undefined var, won't know until you try to use the variable that's assigned w/ it
-
-
-    def run_assign2(self, node, scope_stack):
-        if (self.trace_output == True):
-            print("\tInside RUN_ASSIGN")
-        node_dict = node.dict
-        var_name = node_dict['name']
-
-
-        scope_to_update = NO_VALUE_DEFINED
-
-        # Traverse stack in reverse order
-        for scope in scope_stack[::-1]:
-            # If variable exists in this scope, this is the one you want to update
-            # ONLY EDIT TOPMOST SCOPE
-            if var_name in scope:
-                scope_to_update = scope
-                break
-
-        # If not found in any scope
-        if scope_to_update is NO_VALUE_DEFINED:
-            super().error(
-                ErrorType.NAME_ERROR,
-                f"Variable { {var_name} } not found in any scope"
-            )
-
-        # print("\n---- In RUN_ASSIGN\n\tNode = ", node)
-
-
-        # Calculate expression
-        node_expression = node_dict['expression']
-        node_type = node_expression.elem_type
-        # If string, int, or boolean value
-        if (node_type == 'string' or node_type == 'int' or node_type == 'bool'):
-            scope_to_update[var_name] = self.get_value(node_expression)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # # If another variable
-        elif (node_type == 'var'):
-            scope_to_update[var_name] = self.get_variable_assignment(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # Using an OVERLOADED operator
-        elif (node_type in self.OVERLOADED_OPERATIONS):
-            scope_to_update[var_name] = self.overloaded_operator(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-        
-        # Integer Operation to be computed
-        elif (node_type in self.INT_OPERATIONS):
-            scope_to_update[var_name] = self.run_int_operation(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # Boolean Operation to be computed
-        elif (node_type in self.BOOL_OPERATIONS):
-            scope_to_update[var_name] = self.run_bool_operation(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # Equality comparison
-        elif (node_type in self.EQUALITY_COMPARISONS):
-            scope_to_update[var_name] = self.check_equality(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # Integer value comparison
-        elif (node_type in self.INTEGER_COMPARISONS):
-            scope_to_update[var_name] = self.integer_compare(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-
-        # Function call
-        elif (node_type == 'fcall'):
-            scope_to_update[var_name] = self.run_fcall(node_expression, scope_stack)
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-        
-        # Nil value
-        elif (node_type == 'nil'):
-            scope_to_update[var_name] = Element("nil")
-            if (self.trace_output == True):
-                print("\t\tUpdated scope_stack: ", scope_stack)
-        else:
-            super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Unrecognized expression \"{node_type}\" in variable assignment for {var_name}"
-                ) 
 
 
     ''' ---- If Statement ---- '''
@@ -710,7 +621,7 @@ class Interpreter(InterpreterBase):
         
         # If variable
         if node_type == 'var':
-            node_value = self.get_variable_assignment(node, func_vars)
+            node_value = self.evaluate_var(node, func_vars)
             # print("\tPAssed in variable w/ value: ", node_value)
             if not (isinstance(node_value, int)) or node_value is True or node_value is False:
                 super().error(
@@ -779,7 +690,7 @@ class Interpreter(InterpreterBase):
 
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
-            val = self.get_variable_assignment(node, func_vars)
+            val = self.evaluate_var(node, func_vars)
 
             # Check if INT or BOOL
             if (isinstance( val , int)):
@@ -836,7 +747,7 @@ class Interpreter(InterpreterBase):
         
         # If variable
         if node_type == 'var':
-            node_value = self.get_variable_assignment(node, func_vars)
+            node_value = self.evaluate_var(node, func_vars)
 
             if node_value is not True and node_value is not False:
                 super().error(
@@ -1104,15 +1015,13 @@ class Interpreter(InterpreterBase):
                 string_to_output += str(element.dict['val'])
             # # If variable, retrieve variable value
             elif node_type == 'var':
-                # will raise error if variable hasn't been defined
-                string_to_output += str( self.evaluate_var(element, func_vars) )
-                # val = self.get_variable_assignment(element, func_vars)
-                # if val is True:
-                #     string_to_output += "true"
-                # elif val is False:
-                #     string_to_output += "false"
-                # else:
-                #     string_to_output += str (val)
+                val = self.evaluate_var(element, func_vars)
+                if val is True:
+                    string_to_output += "true"
+                elif val is False:
+                    string_to_output += "false"
+                else:
+                    string_to_output += str (val)
 
             elif (node_type in self.OVERLOADED_OPERATIONS):
                 # If BOOLS in overloaded operatos --> need to add the True False check
