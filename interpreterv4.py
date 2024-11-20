@@ -145,42 +145,42 @@ class Interpreter(InterpreterBase):
 
             # if variable - check calling_func_args
             # if op, call run_operation
-        for arg in func_args:
-            arg_type = arg.elem_type
-            # If it is already a value, add that value
-            if arg_type in ['string', 'int', 'bool']:
-                func_arg_values.append( self.get_value (arg) )
-            elif arg_type == 'var':
-                # Check variable is defining within calling function + get value if so
-                func_arg_values.append( self.get_variable_assignment (arg, calling_func_vars))
-            elif arg_type == 'fcall':
-                # TODO: check for NONE return
-                func_arg_values.append( self.run_fcall(arg, calling_func_vars) )
-            # Passed in EXPRESION
-                # Overloaded operation
-            elif arg_type in self.OVERLOADED_OPERATIONS:
-                func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
-                # Integer operation
-            elif arg_type in self.INT_OPERATIONS:
-                func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
-                # Boolean operation
-            elif arg_type in self.BOOL_OPERATIONS:
-                func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
-                # Equality comparison
-            elif arg_type in self.EQUALITY_COMPARISONS:
-                func_arg_values.append( self.check_equality (arg, calling_func_vars) )
-                # Integer comparison
-            elif arg_type in self.INTEGER_COMPARISONS:
-                func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
-            elif arg_type == 'nil':
-                func_arg_values.append( arg )
-            else:
-                func_arg_values.append(arg)
+        # for arg in func_args:
+        #     arg_type = arg.elem_type
+        #     # If it is already a value, add that value
+        #     if arg_type in ['string', 'int', 'bool']:
+        #         func_arg_values.append( self.get_value (arg) )
+        #     elif arg_type == 'var':
+        #         # Check variable is defining within calling function + get value if so
+        #         func_arg_values.append( self.get_variable_assignment (arg, calling_func_vars))
+        #     elif arg_type == 'fcall':
+        #         # TODO: check for NONE return
+        #         func_arg_values.append( self.run_fcall(arg, calling_func_vars) )
+        #     # Passed in EXPRESION
+        #         # Overloaded operation
+        #     elif arg_type in self.OVERLOADED_OPERATIONS:
+        #         func_arg_values.append( self.overloaded_operator (arg, calling_func_vars) )
+        #         # Integer operation
+        #     elif arg_type in self.INT_OPERATIONS:
+        #         func_arg_values.append( self.run_int_operation (arg, calling_func_vars) )
+        #         # Boolean operation
+        #     elif arg_type in self.BOOL_OPERATIONS:
+        #         func_arg_values.append( self.run_bool_operation (arg, calling_func_vars) )
+        #         # Equality comparison
+        #     elif arg_type in self.EQUALITY_COMPARISONS:
+        #         func_arg_values.append( self.check_equality (arg, calling_func_vars) )
+        #         # Integer comparison
+        #     elif arg_type in self.INTEGER_COMPARISONS:
+        #         func_arg_values.append( self.integer_compare (arg, calling_func_vars) )
+        #     elif arg_type == 'nil':
+        #         func_arg_values.append( arg )
+        #     else:
+        #         func_arg_values.append(arg)
                 # print("***********************\n\t IN RUN_FCALL, don't know how to process arguments: ", arg)
         #         # TODO: if error, likely is in missing a case here
 
 
-        return self.run_func( func_to_run , func_arg_values )
+        return self.run_func( func_to_run , func_args )
 
 
     ''' ---- RUN FUNCTION ---- '''
@@ -235,6 +235,47 @@ class Interpreter(InterpreterBase):
 
     ''' ---- RUN STATEMENT ---- '''
     def run_statement(self, statement_node, func_vars):
+        node_type = statement_node.elem_type
+
+        # Run node's respective function
+        match node_type:
+            case 'vardef':
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is a variable definition")
+                self.run_vardef(statement_node, func_vars)
+            case '=':
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is a variable assignment")
+                self.run_assign(statement_node, func_vars)
+            case 'fcall':
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is a function call")
+                self.run_fcall(statement_node, func_vars)
+            case 'if':
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is an IF statement")
+                self.evaluate_if(statement_node, func_vars)
+            case 'for':
+                if (self.trace_output == True):
+                    print("\nRUN_STATEMENT: This node is an FOR loop")
+                self.run_for_loop(statement_node, func_vars)
+            case 'return':
+                return_expression = statement_node.dict['expression']
+
+                # Want to just return the whole expression, instead of a value --> (lazy evaluate)
+                if return_expression == None or return_expression.elem_type == 'nil':
+                    raise ReturnValue( Element("nil") )
+                else:
+                    raise ReturnValue(return_expression)
+
+            case _:
+                super().error(
+                    ErrorType.NAME_ERROR,
+                    f"Unrecognized statement of type {node_type}"
+                )
+
+
+    def run_statement2(self, statement_node, func_vars):
         node_type = statement_node.elem_type
 
         # Run node's respective function
