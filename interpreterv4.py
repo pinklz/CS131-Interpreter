@@ -389,7 +389,7 @@ class Interpreter(InterpreterBase):
         return actual_value
 
 
-    def evaluate_var(self, node, scope_stack):      # returns primitive VALUE in variable
+    def evaluate_var(self, node, scope_stack):      # returns primitive VALUE in variable + updates scope_stack w/ Val element
 
         var_name = node.dict['name']
 
@@ -424,7 +424,7 @@ class Interpreter(InterpreterBase):
         if (value_type is NO_VALUE_DEFINED or actual_value is NO_VALUE_DEFINED):
             print("--- ERRR, either value_type or actual_value wasn't set")
 
-        value_element = Element(value_type)
+        value_element = Element(value_type)         # TODO: careful with obj refs here. this creates a new object but its possible actual_value points to something shared
         value_element.dict['val'] = actual_value
         mapping_element.dict = {'name': var_name, 'expression': value_element}
 
@@ -529,7 +529,7 @@ class Interpreter(InterpreterBase):
             fcall_return = self.run_fcall(condition, func_vars)
 
             # Actually evaluate return expression
-            rcall_return = self.evaluate_expression(fcall_return)
+            fcall_return = self.evaluate_expression(fcall_return)
             
             if fcall_return is True or fcall_return is False:
                 eval_statements = fcall_return
@@ -750,6 +750,15 @@ class Interpreter(InterpreterBase):
 
         # TODO: if add more string ops, need to check for NIL
 
+        if node_type == 'bool' or node_type == 'int' or node_type == 'nil':
+            super().error(
+                    ErrorType.TYPE_ERROR,
+                    f"Incompatible types for STRING operation, attempted to use boolean or integer constant value)"
+                )
+            
+        if node_type == 'string':
+            return self.get_value(node)
+
          # BASE: if operand is a VARIABLE --> return that variable's value
         if node_type == 'var':
             val = self.evaluate_var(node, func_vars)
@@ -768,15 +777,7 @@ class Interpreter(InterpreterBase):
                 )
             # Otherwise, return value
             return val
-        
-        if node_type == 'bool' or node_type == 'int':
-            super().error(
-                    ErrorType.TYPE_ERROR,
-                    f"Incompatible types for STRING operation, attempted to use boolean or integer constant value)"
-                )
-            
-        if node_type == 'string':
-            return self.get_value(node)
+
         
         # Function call
         if node_type == 'fcall':
@@ -875,14 +876,14 @@ class Interpreter(InterpreterBase):
 
         # Boolean operation
         if node_type == '||':
-            op1_value = self.run_bool_operation(op1, func_vars)
-            op2_value = self.run_bool_operation(op2, func_vars)
-            return op1_value or op2_value
+            # op1_value = self.run_bool_operation(op1, func_vars)
+            # op2_value = self.run_bool_operation(op2, func_vars)
+            return self.run_bool_operation(op1, func_vars) or self.run_bool_operation(op2, func_vars)
         
         if node_type == '&&':
-            op1_value = self.run_bool_operation(op1, func_vars)
-            op2_value = self.run_bool_operation(op2, func_vars)
-            return op1_value and op2_value
+            # op1_value = self.run_bool_operation(op1, func_vars)
+            # op2_value = self.run_bool_operation(op2, func_vars)
+            return self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars)
 
 
     ''' ---- Comparison Operations ---- '''
