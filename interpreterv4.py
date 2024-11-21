@@ -892,7 +892,7 @@ class Interpreter(InterpreterBase):
 
             # Get variable value
             if op_type == 'var':
-                return self.get_variable_assignment(node, func_vars)
+                return self.evaluate_var(node, func_vars)
 
             # If value type
             if op_type == 'int' or op_type == 'string' or op_type == 'bool':
