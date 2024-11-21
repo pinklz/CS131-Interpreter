@@ -276,6 +276,8 @@ class Interpreter(InterpreterBase):
             actual_value =  self.get_value(node_expression)
         
         # TODO: variable bruh how do I do that
+        elif (node_type == 'var'):
+            actual_value = self.evaluate_var(node_expression, scope_stack)
 
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)        # returns 
@@ -320,6 +322,9 @@ class Interpreter(InterpreterBase):
         if (node_type == 'var'):
             print("** NAWr have not done variable-to-variable assignments yet")
 
+        # TODO: Pass into this function (evaluate_var) the scope stack relevant to when this variable was declared
+            # which should come from GET_VARIABLE_ASSIGNMENT
+            # and then pass it into evaluate_expression below 
         actual_value = self.evaluate_expression(node_expression, scope_stack)
         
         # Get value type from returned value type
