@@ -259,7 +259,6 @@ class Interpreter(InterpreterBase):
                 # print("\n(run statement) TRY clause")
                 # print("\tStatements = ")
                 for st in statement_node.dict['statements']:
-                    print("\t\t", st)
                     try:
                         self.run_statement(st, func_vars)
                     except BrewinException as excpt:
