@@ -900,7 +900,11 @@ class Interpreter(InterpreterBase):
 
         # Actually perform equality check
         if (same is not True) and (same is not False):
-            print("_____ERRRRrrrr Same was never set to anything in CHECK EQUALITY______")
+            # print("_____ERRRRrrrr Same was never set to anything in CHECK EQUALITY______")
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f"Non-boolean value arose in equality check"
+            )
 
 
         if node_type == '==':
