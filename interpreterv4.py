@@ -201,8 +201,6 @@ class Interpreter(InterpreterBase):
     def run_statement(self, statement_node, func_vars):
         node_type = statement_node.elem_type
 
-        # print("\n-- In RUN STATEMENT\t Node = ", statement_node)
-
         # Run node's respective function
         match node_type:
             case 'vardef':
@@ -220,6 +218,7 @@ class Interpreter(InterpreterBase):
                 # print("\tStatements = ")
                 for st in statement_node.dict['statements']:
                     try:
+                        # print("\t Running 'try' statement: ", st)
                         self.run_statement(st, func_vars)
                     except BrewinException as excpt:
                         # print("Caught exception: ", excpt)
@@ -227,16 +226,19 @@ class Interpreter(InterpreterBase):
                         
                         for catcher in statement_node.dict['catchers']:
                             catcher_type = catcher.dict['exception_type']
+                            # print(" ## Trying catcher type: ", catcher_type)
                             if (catcher_type == exception_type):
                                 # print("MATCH catcher + exception type")
                                 # Run statements in catcher
                                 for statement in catcher.dict['statements']:
                                     self.run_statement(statement, func_vars)
+                                return
 
-
-                        return      # Don't run rest of function
+                        # If no catcher in these, raise again?
+                        # print(f"++ Raising exception {{exception_type}} again ++")
+                        raise BrewinException(exception_type)
                         # TODO: put a real return value or something I can check other times I'm calling run_statemnet
-                
+                # print("FINISHED through try statements, reached end")
                 
             case 'raise':
                 # print("\n-- RAISE statement = ", statement_node, "---")
