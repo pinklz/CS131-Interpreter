@@ -241,10 +241,14 @@ class Interpreter(InterpreterBase):
                 # print("FINISHED through try statements, reached end")
                 
             case 'raise':
-                # TODO: evaluate the expression
-                    # could be a string operation or variable
+                # TODO: make sure it's a STRING return
                 # print("\n-- RAISE statement = ", statement_node, "---")
                 exception_type = self.evaluate_expression(statement_node.dict['exception_type'], func_vars)       # Get actual string value
+                if ( type(exception_type) is not str):
+                    super().error(
+                        ErrorType.TYPE_ERROR,
+                        f"Attempted to raise NON-STRING { {exception_type} } in raise statement"
+                    )
                 raise BrewinException(exception_type)            
             case 'return':
                 return_expression = statement_node.dict['expression']
