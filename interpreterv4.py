@@ -7,6 +7,10 @@ class ReturnValue(Exception):
     def __init__(self, return_value):
         self.return_value = return_value
 
+class BrewinException(Exception):
+    def __init__(self, type):
+        self.exception_type = type
+
 NO_VALUE_DEFINED = object()
 
 class Interpreter(InterpreterBase):
@@ -237,28 +241,48 @@ class Interpreter(InterpreterBase):
     def run_statement(self, statement_node, func_vars):
         node_type = statement_node.elem_type
 
+        # print("\n-- In RUN STATEMENT\t Node = ", statement_node)
+
         # Run node's respective function
         match node_type:
             case 'vardef':
-                if (self.trace_output == True):
-                    print("\nRUN_STATEMENT: This node is a variable definition")
                 self.run_vardef(statement_node, func_vars)
             case '=':
-                if (self.trace_output == True):
-                    print("\nRUN_STATEMENT: This node is a variable assignment")
                 self.run_assign(statement_node, func_vars)
             case 'fcall':
-                if (self.trace_output == True):
-                    print("\nRUN_STATEMENT: This node is a function call")
                 self.run_fcall(statement_node, func_vars)
             case 'if':
-                if (self.trace_output == True):
-                    print("\nRUN_STATEMENT: This node is an IF statement")
                 self.evaluate_if(statement_node, func_vars)
             case 'for':
-                if (self.trace_output == True):
-                    print("\nRUN_STATEMENT: This node is an FOR loop")
                 self.run_for_loop(statement_node, func_vars)
+            case 'try':
+                # print("\n(run statement) TRY clause")
+                # print("\tStatements = ")
+                for st in statement_node.dict['statements']:
+                    print("\t\t", st)
+                    try:
+                        self.run_statement(st, func_vars)
+                    except BrewinException as excpt:
+                        # print("Caught exception: ", excpt)
+                        exception_type = excpt.exception_type
+                        
+                        for catcher in statement_node.dict['catchers']:
+                            catcher_type = catcher.dict['exception_type']
+                            if (catcher_type == exception_type):
+                                # print("MATCH catcher + exception type")
+                                # Run statements in catcher
+                                for statement in catcher.dict['statements']:
+                                    self.run_statement(statement, func_vars)
+
+
+                        return      # Don't run rest of function
+                        # TODO: put a real return value or something I can check other times I'm calling run_statemnet
+                
+                
+            case 'raise':
+                # print("\n-- RAISE statement = ", statement_node, "---")
+                exception_type = self.get_value(statement_node.dict['exception_type'])       # Get actual string value
+                raise BrewinException(exception_type)            
             case 'return':
                 return_expression = statement_node.dict['expression']
 
@@ -900,7 +924,8 @@ class Interpreter(InterpreterBase):
             
             if op_type == 'fcall':
                 # TODO: check return None
-                return self.run_fcall(node, func_vars)
+                fcall_ret = self.run_fcall(node, func_vars)
+                return self.evaluate_expression(fcall_ret)
             
             if op_type == 'nil':
                 return Element("nil")
