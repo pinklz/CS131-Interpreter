@@ -319,13 +319,14 @@ class Interpreter(InterpreterBase):
         actual_value = NO_VALUE_DEFINED
         value_type = NO_VALUE_DEFINED
 
-        if (node_type == 'var'):
-            print("** NAWr have not done variable-to-variable assignments yet")
+        # if (node_type == 'var'):
+        #     print("** NAWr have not done variable-to-variable assignments yet")
 
         # TODO: Pass into this function (evaluate_var) the scope stack relevant to when this variable was declared
             # which should come from GET_VARIABLE_ASSIGNMENT
             # and then pass it into evaluate_expression below 
-        actual_value = self.evaluate_expression(node_expression, scope_stack)
+        # actual_value = self.evaluate_expression(node_expression, scope_stack)
+        actual_value = self.evaluate_expression(node_expression, state_when_node_assigned)
         
         # Get value type from returned value type
             # to be used in Element(type)
