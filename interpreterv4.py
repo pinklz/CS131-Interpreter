@@ -176,7 +176,9 @@ class Interpreter(InterpreterBase):
 
         # Map argument values to the parameter names
         for var_name, var_value in zip(node_params, func_args):
-            func_vars[var_name.dict['name']] = var_value
+            func_vars[var_name.dict['name']] = {}
+            func_vars[var_name.dict['name']]['expression'] = var_value
+            func_vars[var_name.dict['name']]['state'] = [ func_vars ]   # TODO: print this, check it
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
