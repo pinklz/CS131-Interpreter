@@ -1,6 +1,7 @@
 from brewparse import parse_program
 from intbase import *
 from element import Element
+import copy
 
 # Custom exception class to catch return values
 class ReturnValue(Exception):
@@ -307,12 +308,11 @@ class Interpreter(InterpreterBase):
 
         var_name = node.dict['name']
 
-        # print(f"\n--- in EVALUATE VAR\n\tNode { {var_name} }")
-        node_expression = self.get_variable_assignment(node, scope_stack)
+        node_whole_expr = self.get_variable_assignment(node, scope_stack)
+        node_expression = node_whole_expr['expression']
+        state_when_node_assigned = node_whole_expr['state']
         node_type = node_expression.elem_type
 
-        # print("\tNode's assignment = ", node_expression)
-        # print("\t\tTYPE: ", node_type)
 
         # NEED from each call: return type, and return value
         mapping_element = Element("=")
@@ -368,9 +368,12 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR,
                 f"Variable {var_name} defined more than once"
             )
+        
+        latest_scope[var_name] = {}
 
         # Add new variable to func_vars           Initial value: None
-        latest_scope[var_name] = "DIS IS THE INITIAL VARIABLE VALUE"
+        latest_scope[var_name]['expression'] = "DIS IS THE INITIAL VARIABLE VALUE"
+        latest_scope[var_name]['state'] = copy.deepcopy(scope_stack)
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", latest_scope)
 
@@ -406,7 +409,8 @@ class Interpreter(InterpreterBase):
         # Calculate expression
         node_expression = node_dict['expression']
 
-        scope_to_update[var_name] = node_expression
+        scope_to_update[var_name]['expression'] = node_expression
+        scope_to_update[var_name]['state'] = copy.deepcopy(scope_stack)     # Store state of variables during this assignment
 
         # TODO: figure out how to store variable values w/o actually evaluating the expression
             # but can't look up variable values until x is called (ie if undefined var, won't know until you try to use the variable that's assigned w/ it
