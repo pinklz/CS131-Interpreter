@@ -305,7 +305,6 @@ class Interpreter(InterpreterBase):
 
 
     def evaluate_var(self, node, scope_stack):      # returns primitive VALUE in variable + updates scope_stack w/ Val element
-
         var_name = node.dict['name']
 
         node_whole_expr = self.get_variable_assignment(node, scope_stack)
@@ -322,10 +321,6 @@ class Interpreter(InterpreterBase):
         # if (node_type == 'var'):
         #     print("** NAWr have not done variable-to-variable assignments yet")
 
-        # TODO: Pass into this function (evaluate_var) the scope stack relevant to when this variable was declared
-            # which should come from GET_VARIABLE_ASSIGNMENT
-            # and then pass it into evaluate_expression below 
-        # actual_value = self.evaluate_expression(node_expression, scope_stack)
         actual_value = self.evaluate_expression(node_expression, state_when_node_assigned)
         
         # Get value type from returned value type
@@ -372,8 +367,11 @@ class Interpreter(InterpreterBase):
         
         latest_scope[var_name] = {}
 
+        default_element = Element('string')
+        default_element.dict['val'] = "DIS IS THE INITIAL VARIABLE VALUE"
+
         # Add new variable to func_vars           Initial value: None
-        latest_scope[var_name]['expression'] = "DIS IS THE INITIAL VARIABLE VALUE"
+        latest_scope[var_name]['expression'] = default_element
         latest_scope[var_name]['state'] = copy.deepcopy(scope_stack)
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", latest_scope)
@@ -555,11 +553,11 @@ class Interpreter(InterpreterBase):
         op1 = node.dict['op1']
         op2 = node.dict['op2']
 
-        # TODO: fix this function, the eval_op runs function calls and then they are run again in the actual operation - need to cut down to ONE call
-
         # Get operator values 
         op1_value = self.eval_op(op1, func_vars)
         op2_value = self.eval_op(op2, func_vars)
+
+        operation_element = Element("+")
 
         # TODO: I think? Add NONE check to make sure not using a void function in operation
 
@@ -573,9 +571,25 @@ class Interpreter(InterpreterBase):
         if node_type == '+':
             # '+' is defined for INT and STRING
             if type(op1_value) == int:
-                return self.run_int_operation(node, func_vars)
+                op1_element = Element('int')
+                op1_element.dict['val'] = op1_value
+                op2_element = Element('int')
+                op2_element.dict['val'] = op2_value
+
+                operation_element.dict['op1'] = op1_element
+                operation_element.dict['op2'] = op2_element
+                
+                return self.run_int_operation(operation_element, func_vars)
             if type(op1_value) == str:
-                return self.run_string_operation(node, func_vars)
+                op1_element = Element('string')
+                op1_element.dict['val'] = op1_value
+                op2_element = Element('string')
+                op2_element.dict['val'] = op2_value
+
+                operation_element.dict['op1'] = op1_element
+                operation_element.dict['op2'] = op2_element
+
+                return self.run_string_operation(operation_element, func_vars)
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -828,7 +842,7 @@ class Interpreter(InterpreterBase):
             if op_type == 'fcall':
                 # TODO: check return None
                 fcall_ret = self.run_fcall(node, func_vars)
-                return self.evaluate_expression(fcall_ret)
+                return self.evaluate_expression(fcall_ret, func_vars)
             
             if op_type == 'nil':
                 return Element("nil")
@@ -1057,7 +1071,7 @@ class Interpreter(InterpreterBase):
                 fcall_ret = self.run_fcall(element, func_vars)
 
                 # Actually evaluate function return statement
-                fcall_ret = self.evaluate_expression(fcall_ret)
+                fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
                 string_to_output += str(fcall_ret)
 
         super().output(string_to_output)
