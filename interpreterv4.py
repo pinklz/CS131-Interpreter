@@ -151,7 +151,13 @@ class Interpreter(InterpreterBase):
                 f"Function { {func_name} } with { len(func_args)} parameters was not found"
             )
 
-        return self.run_func( func_to_run , func_args )
+        func_arg_objs = []
+        for arg in func_args:
+            expr_object = Expression(arg, calling_func_vars)
+            func_arg_objs.append(expr_object)
+
+
+        return self.run_func( func_to_run , func_arg_objs )
 
 
     ''' ---- RUN FUNCTION ---- '''
@@ -171,8 +177,7 @@ class Interpreter(InterpreterBase):
         node_params = node_dict['args']
 
         # Map argument values to the parameter names
-        for var_name, expression in zip(node_params, func_args):
-            expr_object = Expression(expression, [func_vars])
+        for var_name, expr_object in zip(node_params, func_args):
             func_vars[var_name.dict['name']] = expr_object
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
