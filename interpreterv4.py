@@ -1,6 +1,7 @@
 from brewparse import parse_program
 from intbase import *
 from element import Element
+import copy
 
 # Custom exception class to catch return values
 class ReturnValue(Exception):
@@ -15,6 +16,14 @@ class Expression():
     def __init__(self, expression, program_state):
         self.expression = expression
         self.program_state = program_state 
+
+    def __str__(self):
+        print("\n+Expression: \t", self.expression)
+        print("+Program State at time of assignment: ")
+        # for scope in self.program_state:
+        #     for var in scope:
+        #         print("\t{", var, "}\t = ", scope[var])
+        return ""
 
 
 NO_VALUE_DEFINED = object()
@@ -112,14 +121,6 @@ class Interpreter(InterpreterBase):
         func_name = node_dict['name']
         func_args = node_dict['args']   # arguments passed into the function call
 
-        if (self.trace_output):
-            if (func_args == []):
-                print("** RUN FCALL -- NO args provided")
-            else:
-                print("** RUN FCALL")
-                print("\tProvided arguments: ")
-                for arg in func_args:
-                    print("\t\t", arg)
 
         # Check if Print, Inputi, or Inputs
         builtin = self.check_builtin_funcs(func_node, calling_func_vars)
@@ -168,20 +169,11 @@ class Interpreter(InterpreterBase):
         
         node_dict = func_node.dict
         node_params = node_dict['args']
-        if (self.trace_output == True):
-            print("--------------------------------------------------------")
-            print("INSIDE RUN_FUNC: Currently running function: ", node_dict['name'])
-
-            if node_params == []:
-                print("\tThis function has NO parameters")
-            else:
-                print("\tThis function has the following paramters: ")
-                for arg in node_params:
-                    print("\t\t", arg)
 
         # Map argument values to the parameter names
-        for var_name, var_value in zip(node_params, func_args):
-            func_vars[var_name.dict['name']] = var_value
+        for var_name, expression in zip(node_params, func_args):
+            expr_object = Expression(expression, [func_vars])
+            func_vars[var_name.dict['name']] = expr_object
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
@@ -193,14 +185,15 @@ class Interpreter(InterpreterBase):
                 self.run_statement(statement_node, scope_stack)
             # If RETURN is found, should throw an exception
             except ReturnValue as rval:
+                # print("\n RUN FUNC, caught return value: ", rval)
                 # Remove all added scopes from inside function
                 while (len(scope_stack) > 1):
                     scope_stack.pop()
 
-                return rval.return_value
+                return rval.return_value         # Returns an Expression instance
 
         # If exit list of statements without reaching a return statement, return NIL
-        return Element("nil")
+        return Expression(Element("nil"), scope_stack)
     
 
     ''' ---- RUN STATEMENT ---- '''
@@ -220,8 +213,6 @@ class Interpreter(InterpreterBase):
             case 'for':
                 self.run_for_loop(statement_node, func_vars)
             case 'try':
-                # print("\n(run statement) TRY clause")
-                # print("\tStatements = ")
                 for st in statement_node.dict['statements']:
                     try:
                         # print("\t Running 'try' statement: ", st)
@@ -238,17 +229,13 @@ class Interpreter(InterpreterBase):
                                 # Run statements in catcher
                                 for statement in catcher.dict['statements']:
                                     self.run_statement(statement, func_vars)
-                                return
-
-                        # If no catcher in these, raise again?
-                        # print(f"++ Raising exception {{exception_type}} again ++")
+                                return                                          # TODO: put a real return value or something I can check other times I'm calling run_statemnet
+                            
                         raise BrewinException(exception_type)
-                        # TODO: put a real return value or something I can check other times I'm calling run_statemnet
-                # print("FINISHED through try statements, reached end")
                 
             case 'raise':
-                # TODO: make sure it's a STRING return
-                # print("\n-- RAISE statement = ", statement_node, "---")
+                
+                # TODO: change this to handle Expression objects
                 exception_type = self.evaluate_expression(statement_node.dict['exception_type'], func_vars)       # Get actual string value
                 if ( type(exception_type) is not str):
                     super().error(
@@ -256,14 +243,16 @@ class Interpreter(InterpreterBase):
                         f"Attempted to raise NON-STRING { {exception_type} } in raise statement"
                     )
                 raise BrewinException(exception_type)            
+            
             case 'return':
                 return_expression = statement_node.dict['expression']
+                if (return_expression == None):
+                    return_expression = Element("nil")
+                expr_object = Expression(return_expression, func_vars)
 
-                # Want to just return the whole expression, instead of a value --> (lazy evaluate)
-                if return_expression == None or return_expression.elem_type == 'nil':
-                    raise ReturnValue( Element("nil") )
-                else:
-                    raise ReturnValue(return_expression)
+                # print("\n-- RUN STATEMENT (return call) - here's the return expression: ", return_expression)
+                raise ReturnValue(expr_object)
+
 
             case _:
                 super().error(
@@ -274,6 +263,7 @@ class Interpreter(InterpreterBase):
 
     def evaluate_expression(self, node_expression, scope_stack):
         # Node expression should be an element, with an expression node
+        
         node_type = node_expression.elem_type
 
         actual_value = NO_VALUE_DEFINED
@@ -286,9 +276,11 @@ class Interpreter(InterpreterBase):
             actual_value = self.evaluate_var(node_expression, scope_stack)
 
         elif (node_type == 'fcall'):
-            fcall_ret = self.run_fcall(node_expression, scope_stack)        # returns 
-            # print("Function returned = ", fcall_ret)
-            actual_value = self.evaluate_expression(fcall_ret, scope_stack)
+            fcall_ret = self.run_fcall(node_expression, scope_stack)        # returns an Expression object
+            # print("Eval EXPR: Function returned = ", fcall_ret)
+            returned_expression = fcall_ret.expression
+            program_state = fcall_ret.program_state
+            actual_value = self.evaluate_expression(returned_expression, program_state)
             # actual_value = self.run_fcall(node_expression, scope_stack)
         
         elif (node_type in self.OVERLOADED_OPERATIONS):
@@ -308,13 +300,51 @@ class Interpreter(InterpreterBase):
 
         return actual_value
 
+    def evaluate_var(self, node, scope_stack):
+        
+        var_name = node.dict['name']
 
-    def evaluate_var(self, node, scope_stack):      # returns primitive VALUE in variable + updates scope_stack w/ Val element
+        expr_object = self.get_variable_assignment(node, scope_stack)       # Always returns an expression class instance
+        if type(expr_object) is not Expression:
+            super().error(
+                ErrorType.TYPE_ERROR,
+                f" MY ERRR -- Non-expression node returned from get_var_assignmnet, must've missed a dictionary assignment somewhere"
+            )
+
+        var_expression = expr_object.expression
+        # print("\n-- EVAL VAR {", var_name, "}\t Expression from object = ", var_expression)
+        program_state = expr_object.program_state
+
+        actual_value = self.evaluate_expression(var_expression, program_state)
+        # print("Value returned: ", actual_value)
+
+        if (actual_value is True or actual_value is False):
+            value_type = 'bool'
+        elif (type(actual_value) == int):
+            value_type = 'int'
+        elif (type(actual_value) == str):
+            value_type = 'string'
+
+        value_element = Element(value_type)         # TODO: careful with obj refs here. this creates a new object but its possible actual_value points to something shared
+        value_element.dict['val'] = actual_value
+
+        # Assign this to the variable's dictionary
+        mapping_element = Element("=")
+        mapping_element.dict = {'name': var_name, 'expression': value_element}
+
+        self.run_assign(mapping_element, scope_stack)
+
+        return actual_value
+
+
+
+    def evaluate_var2(self, node, scope_stack):      # returns primitive VALUE in variable + updates scope_stack w/ Val element
 
         var_name = node.dict['name']
 
         # print(f"\n--- in EVALUATE VAR\n\tNode { {var_name} }")
-        node_expression = self.get_variable_assignment(node, scope_stack)
+        node_expression = self.get_variable_assignment(node, scope_stack)       # Always returns an expression class instance
+
         node_type = node_expression.elem_type
 
         # NEED from each call: return type, and return value
@@ -370,13 +400,13 @@ class Interpreter(InterpreterBase):
                 f"Variable {var_name} defined more than once"
             )
         
-        latest_scope[var_name] = {}
-
         default_element = Element('string')
         default_element.dict['val'] = "DIS IS THE INITIAL VARIABLE VALUE"
 
+        expr_object = Expression(default_element, copy.deepcopy(scope_stack))
+
         # Add new variable to func_vars           Initial value: None
-        latest_scope[var_name] = default_element
+        latest_scope[var_name] = expr_object
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", latest_scope)
 
@@ -410,8 +440,10 @@ class Interpreter(InterpreterBase):
 
         # Calculate expression
         node_expression = node_dict['expression']
+        expr_object = Expression(node_expression, copy.deepcopy(scope_stack))
 
-        scope_to_update[var_name] = node_expression
+        scope_to_update[var_name] = expr_object
+        # print("\n -- ASSIGNMENT of {" ,var_name, "} to ", expr_object)
 
         # TODO: figure out how to store variable values w/o actually evaluating the expression
             # but can't look up variable values until x is called (ie if undefined var, won't know until you try to use the variable that's assigned w/ it
@@ -448,13 +480,13 @@ class Interpreter(InterpreterBase):
 
         # If fcall
         elif (condition_type == 'fcall'):
-            fcall_return = self.run_fcall(condition, func_vars)
-
-            # Actually evaluate return expression
-            fcall_return = self.evaluate_expression(fcall_return)
+            fcall_ret = self.run_fcall(condition, func_vars)        # returns an Expression object
+            returned_expression = fcall_ret.expression
+            program_state = fcall_ret.program_state
+            actual_value = self.evaluate_expression(returned_expression, program_state)
             
-            if fcall_return is True or fcall_return is False:
-                eval_statements = fcall_return
+            if actual_value is True or actual_value is False:
+                eval_statements = actual_value
             else:
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -629,19 +661,19 @@ class Interpreter(InterpreterBase):
             return node_value 
         
         if node_type == 'fcall':
-            fcall_ret = self.run_fcall(node, func_vars)
-            
-            # Actually evaluate function call return expression
-            fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
+            fcall_ret = self.run_fcall(node, func_vars)        # returns an Expression object
+            returned_expression = fcall_ret.expression
+            program_state = fcall_ret.program_state
+            actual_value = self.evaluate_expression(returned_expression, program_state)
 
             # print("\tPassed in function call with return value ", fcall_ret)
-            if not (isinstance(fcall_ret, int)) or fcall_ret is True or fcall_ret is False:
+            if not (isinstance(actual_value, int)) or actual_value is True or actual_value is False:
                 super().error(
                 ErrorType.TYPE_ERROR,
                 f"Attempted to use string or bool or nil via fcall in integer operation"
             )
                 
-            return fcall_ret
+            return actual_value
 
         allowable_types = ['int', 'var', 'fcall'] + self.INT_OPERATIONS
         
@@ -724,13 +756,12 @@ class Interpreter(InterpreterBase):
         
         # Function call
         if node_type == 'fcall':
-            fcall_ret = self.run_fcall(node, func_vars)
-            # Actually evaluate function call return expression
-            fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
+            fcall_ret = self.run_fcall(node, func_vars)        # returns an Expression object
+            returned_expression = fcall_ret.expression
+            program_state = fcall_ret.program_state
+            actual_value = self.evaluate_expression(returned_expression, program_state)
 
-            if (self.trace_output == True):
-                print("EXPRESSION USES A FUNCTION CALL")
-            return fcall_ret
+            return actual_value
 
         # String concatenation
         if node_type == '+':
@@ -771,18 +802,18 @@ class Interpreter(InterpreterBase):
         
         # Function call
         if node_type == 'fcall':
-            fcall_ret = self.run_fcall(node, func_vars)
+            fcall_ret = self.run_fcall(node, func_vars)        # returns an Expression object
+            returned_expression = fcall_ret.expression
+            program_state = fcall_ret.program_state
+            actual_value = self.evaluate_expression(returned_expression, program_state)
 
-            # Actually evaluate function call return expression
-            fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
-
-            if fcall_ret is not True and fcall_ret is not False:
+            if actual_value is not True and actual_value is not False:
                 super().error(
                     ErrorType.TYPE_ERROR,
                     f"Attempted to use int, string, or nil via FCALL RETURN in BOOL operation"
                 )
 
-            return fcall_ret
+            return actual_value
         
         if node_type in self.EQUALITY_COMPARISONS:
             return self.check_equality(node, func_vars)
@@ -843,8 +874,11 @@ class Interpreter(InterpreterBase):
             
             if op_type == 'fcall':
                 # TODO: check return None
-                fcall_ret = self.run_fcall(node, func_vars)
-                return self.evaluate_expression(fcall_ret, func_vars)
+                fcall_ret = self.run_fcall(node, func_vars)        # returns an Expression object
+                returned_expression = fcall_ret.expression
+                program_state = fcall_ret.program_state
+                actual_value = self.evaluate_expression(returned_expression, program_state)
+                return actual_value
             
             if op_type == 'nil':
                 return Element("nil")
@@ -1070,11 +1104,11 @@ class Interpreter(InterpreterBase):
                     string_to_output += "false"
 
             elif node_type == 'fcall':
-                fcall_ret = self.run_fcall(element, func_vars)
-
-                # Actually evaluate function return statement
-                fcall_ret = self.evaluate_expression(fcall_ret, func_vars)
-                string_to_output += str(fcall_ret)
+                fcall_ret = self.run_fcall(element, func_vars)        # returns an Expression object
+                returned_expression = fcall_ret.expression
+                program_state = fcall_ret.program_state
+                actual_value = self.evaluate_expression(returned_expression, program_state)
+                string_to_output += str(actual_value)
 
         super().output(string_to_output)
-        return Element("nil")
+        return Expression(Element("nil"), func_vars)
