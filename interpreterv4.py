@@ -11,6 +11,12 @@ class BrewinException(Exception):
     def __init__(self, type):
         self.exception_type = type
 
+class Expression():
+    def __init__(self, expression, program_state):
+        self.expression = expression
+        self.program_state = program_state 
+
+
 NO_VALUE_DEFINED = object()
 
 class Interpreter(InterpreterBase):
@@ -275,7 +281,7 @@ class Interpreter(InterpreterBase):
         if (node_type in ['int', 'string', 'bool']):
             actual_value =  self.get_value(node_expression)
         
-        # TODO: variable bruh how do I do that
+        # TODO: will probably need to pass in a different version of scope_stack?
         elif (node_type == 'var'):
             actual_value = self.evaluate_var(node_expression, scope_stack)
 
@@ -311,16 +317,11 @@ class Interpreter(InterpreterBase):
         node_expression = self.get_variable_assignment(node, scope_stack)
         node_type = node_expression.elem_type
 
-        # print("\tNode's assignment = ", node_expression)
-        # print("\t\tTYPE: ", node_type)
-
         # NEED from each call: return type, and return value
         mapping_element = Element("=")
         actual_value = NO_VALUE_DEFINED
         value_type = NO_VALUE_DEFINED
 
-        # if (node_type == 'var'):
-        #     print("** NAWr have not done variable-to-variable assignments yet")
 
         # TODO: Pass into this function (evaluate_var) the scope stack relevant to when this variable was declared
             # which should come from GET_VARIABLE_ASSIGNMENT
@@ -405,7 +406,6 @@ class Interpreter(InterpreterBase):
                 f"Variable { {var_name} } not found in any scope"
             )
 
-        # print("\n---- In RUN_ASSIGN\n\tNode = ", node)
 
 
         # Calculate expression
