@@ -1,7 +1,6 @@
 from brewparse import parse_program
 from intbase import *
 from element import Element
-import copy
 
 # Custom exception class to catch return values
 class ReturnValue(Exception):
@@ -176,9 +175,7 @@ class Interpreter(InterpreterBase):
 
         # Map argument values to the parameter names
         for var_name, var_value in zip(node_params, func_args):
-            func_vars[var_name.dict['name']] = {}
-            func_vars[var_name.dict['name']]['expression'] = var_value
-            func_vars[var_name.dict['name']]['state'] = [ func_vars ]   # TODO: print this, check it
+            func_vars[var_name.dict['name']] = var_value
 
         # Base parameter:argument pairs are the ENCLOSING environment defined variables
         scope_stack.append( func_vars )
@@ -307,13 +304,15 @@ class Interpreter(InterpreterBase):
 
 
     def evaluate_var(self, node, scope_stack):      # returns primitive VALUE in variable + updates scope_stack w/ Val element
+
         var_name = node.dict['name']
 
-        node_whole_expr = self.get_variable_assignment(node, scope_stack)
-        node_expression = node_whole_expr['expression']
-        state_when_node_assigned = node_whole_expr['state']
+        # print(f"\n--- in EVALUATE VAR\n\tNode { {var_name} }")
+        node_expression = self.get_variable_assignment(node, scope_stack)
         node_type = node_expression.elem_type
 
+        # print("\tNode's assignment = ", node_expression)
+        # print("\t\tTYPE: ", node_type)
 
         # NEED from each call: return type, and return value
         mapping_element = Element("=")
@@ -323,7 +322,10 @@ class Interpreter(InterpreterBase):
         # if (node_type == 'var'):
         #     print("** NAWr have not done variable-to-variable assignments yet")
 
-        actual_value = self.evaluate_expression(node_expression, state_when_node_assigned)
+        # TODO: Pass into this function (evaluate_var) the scope stack relevant to when this variable was declared
+            # which should come from GET_VARIABLE_ASSIGNMENT
+            # and then pass it into evaluate_expression below 
+        actual_value = self.evaluate_expression(node_expression, scope_stack)
         
         # Get value type from returned value type
             # to be used in Element(type)
@@ -373,8 +375,7 @@ class Interpreter(InterpreterBase):
         default_element.dict['val'] = "DIS IS THE INITIAL VARIABLE VALUE"
 
         # Add new variable to func_vars           Initial value: None
-        latest_scope[var_name]['expression'] = default_element
-        latest_scope[var_name]['state'] = copy.deepcopy(scope_stack)
+        latest_scope[var_name] = default_element
         if (self.trace_output == True):
             print("\t\tCurrent func_vars: ", latest_scope)
 
@@ -410,8 +411,7 @@ class Interpreter(InterpreterBase):
         # Calculate expression
         node_expression = node_dict['expression']
 
-        scope_to_update[var_name]['expression'] = node_expression
-        scope_to_update[var_name]['state'] = copy.deepcopy(scope_stack)     # Store state of variables during this assignment
+        scope_to_update[var_name] = node_expression
 
         # TODO: figure out how to store variable values w/o actually evaluating the expression
             # but can't look up variable values until x is called (ie if undefined var, won't know until you try to use the variable that's assigned w/ it
