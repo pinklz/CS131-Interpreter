@@ -89,7 +89,7 @@ class Interpreter(InterpreterBase):
                     ErrorType.NAME_ERROR,
                     f"No inputi() function found that takes more than 1 parameter"
                 )
-            return self.inputi(node_dict['args'])
+            return self.inputi(scope_stack, node_dict['args'])
         
         if func_name == 'inputs':
             if (len (node_dict['args']) > 1):
@@ -97,7 +97,7 @@ class Interpreter(InterpreterBase):
                     ErrorType.NAME_ERROR,
                     f"No inputs() function found that takes more than 1 parameter"
                 )
-            return self.inputs(node_dict['args'])
+            return self.inputs(scope_stack, node_dict['args'])
         
         if func_name == 'print':
             return self.printout(scope_stack, node_dict['args'])
@@ -818,7 +818,7 @@ class Interpreter(InterpreterBase):
             
 
     def check_equality(self, node, func_vars):   
-
+        
         node_type = node.elem_type
         op1 = node.dict['op1']
         op2 = node.dict['op2']
@@ -920,23 +920,25 @@ class Interpreter(InterpreterBase):
 
     
     ''' ---- INPUTI function ---- '''
-    def inputi(self, prompt=[]):
+    def inputi(self, scope_stack, prompt=[]):
         if (prompt == []):
             user_input = super().get_input()
         else:
-            prompt_string = prompt[0].dict['val']
-            super().output(prompt_string)
+            arg = prompt[0]
+            arg = self.evaluate_expression(arg, scope_stack)
+            super().output(arg)
             user_input = super().get_input()
 
         return int(user_input)
 
     ''' ---- INPUTIS function ---- '''
-    def inputs(self, prompt=[]):
+    def inputs(self, scope_stack, prompt=[]):
         if (prompt == []):
             user_input = super().get_input()
         else:
-            prompt_string = prompt[0].dict['val']
-            super().output(prompt_string)
+            arg = prompt[0]
+            arg = self.evaluate_expression(arg, scope_stack)
+            super().output(arg)
             user_input = super().get_input()
 
         return str(user_input)
