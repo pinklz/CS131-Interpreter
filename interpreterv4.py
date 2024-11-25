@@ -778,43 +778,43 @@ class Interpreter(InterpreterBase):
 
     ''' ---- Comparison Operations ---- '''
     def eval_op(self, node, func_vars):
-            op_type = node.elem_type
+        op_type = node.elem_type
 
-            # Get variable value
-            if op_type == 'var':
-                return self.evaluate_var(node, func_vars)
+        # Get variable value
+        if op_type == 'var':
+            return self.evaluate_var(node, func_vars)
 
-            # If value type
-            if op_type == 'int' or op_type == 'string' or op_type == 'bool':
-                return self.get_value(node)
-            
-            if op_type == 'fcall':
-                # TODO: check return None
-                fcall_ret = self.run_fcall(node, func_vars)        # returns an Expression object
-                returned_expression = fcall_ret.expression
-                program_state = fcall_ret.program_state
-                actual_value = self.evaluate_expression(returned_expression, program_state)
-                return actual_value
-            
-            if op_type == 'nil':
-                return Element("nil")
-            
-            if op_type in self.OVERLOADED_OPERATIONS:
-                return self.overloaded_operator(node, func_vars)
-            
-            if op_type in self.INT_OPERATIONS:
-                return self.run_int_operation(node, func_vars)
-            
-            if op_type in self.BOOL_OPERATIONS:
-                return self.run_bool_operation(node, func_vars)
-            
-            if op_type in self.EQUALITY_COMPARISONS:
-                return self.check_equality(node, func_vars)
-            
-            if op_type in self.INTEGER_COMPARISONS:
-                return self.integer_compare(node, func_vars)
-            
-            return NO_VALUE_DEFINED
+        # If value type
+        if op_type == 'int' or op_type == 'string' or op_type == 'bool':
+            return self.get_value(node)
+        
+        if op_type == 'fcall':
+            # TODO: check return None
+            fcall_ret = self.run_fcall(node, func_vars)        # returns an Expression object
+            returned_expression = fcall_ret.expression
+            program_state = fcall_ret.program_state
+            actual_value = self.evaluate_expression(returned_expression, program_state)
+            return actual_value
+        
+        if op_type == 'nil':
+            return 'nil'
+        
+        if op_type in self.OVERLOADED_OPERATIONS:
+            return self.overloaded_operator(node, func_vars)
+        
+        if op_type in self.INT_OPERATIONS:
+            return self.run_int_operation(node, func_vars)
+        
+        if op_type in self.BOOL_OPERATIONS:
+            return self.run_bool_operation(node, func_vars)
+        
+        if op_type in self.EQUALITY_COMPARISONS:
+            return self.check_equality(node, func_vars)
+        
+        if op_type in self.INTEGER_COMPARISONS:
+            return self.integer_compare(node, func_vars)
+        
+        return NO_VALUE_DEFINED
             
 
     def check_equality(self, node, func_vars):   
@@ -833,9 +833,14 @@ class Interpreter(InterpreterBase):
 
         same = NO_VALUE_DEFINED
 
+        if op1_value == 'nil' and op2_value == 'nil':
+            same = True
+        elif (op1_value == 'nil') or (op2_value == 'nil'):
+            same = False
+
 
         # If both are bool
-        if ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
+        elif ((op1_value is True) and (op2_value is True)) or ( (op1_value is False) and (op2_value is False)):
             same = True
         elif ( (op1_value is True) and (op2_value is False)) or ((op1_value is False) and (op2_value is True)):
             same = False
@@ -847,27 +852,9 @@ class Interpreter(InterpreterBase):
         else:
             same = (op1_value == op2_value)
 
-        op1_type = None
-        op2_type = None
-        try:
-            op1_type = op1_value.elem_type
-        except:
-            pass
-
-        try:
-            op2_type = op2_value.elem_type
-        except:
-            pass
-
-        if (op1_type == 'nil' and op2_type == 'nil'):
-            same = True
-        elif (op1_type == 'nil') or (op2_type == 'nil'):
-            same = False
-
 
         # Actually perform equality check
         if (same is not True) and (same is not False):
-            # print("_____ERRRRrrrr Same was never set to anything in CHECK EQUALITY______")
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Non-boolean value arose in equality check"
