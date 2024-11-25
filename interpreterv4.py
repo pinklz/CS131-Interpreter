@@ -19,10 +19,6 @@ class Expression():
 
     def __str__(self):
         print("\n+Expression: \t", self.expression)
-        print("+Program State at time of assignment: ")
-        # for scope in self.program_state:
-        #     for var in scope:
-        #         print("\t{", var, "}\t = ", scope[var])
         return ""
 
 
@@ -88,8 +84,6 @@ class Interpreter(InterpreterBase):
         ''' PRINT + INPTUTI + INPUTS handling'''
         # Separate handling for: PRINT, INPUTI
         if func_name == 'inputi':
-            if (self.trace_output == True):
-                print("\tCalling inputi function")
             if (len (node_dict['args']) > 1):
                 super().error(
                     ErrorType.NAME_ERROR,
@@ -98,8 +92,6 @@ class Interpreter(InterpreterBase):
             return self.inputi(node_dict['args'])
         
         if func_name == 'inputs':
-            if (self.trace_output == True):
-                print("\tCalling inputs function")
             if (len (node_dict['args']) > 1):
                 super().error(
                     ErrorType.NAME_ERROR,
@@ -190,7 +182,6 @@ class Interpreter(InterpreterBase):
                 self.run_statement(statement_node, scope_stack)
             # If RETURN is found, should throw an exception
             except ReturnValue as rval:
-                # print("\n RUN FUNC, caught return value: ", rval)
                 # Remove all added scopes from inside function
                 while (len(scope_stack) > 1):
                     scope_stack.pop()
@@ -255,7 +246,6 @@ class Interpreter(InterpreterBase):
                     return_expression = Element("nil")
                 expr_object = Expression(return_expression, func_vars)
 
-                # print("\n-- RUN STATEMENT (return call) - here's the return expression: ", return_expression)
                 raise ReturnValue(expr_object)
 
 
@@ -282,11 +272,9 @@ class Interpreter(InterpreterBase):
 
         elif (node_type == 'fcall'):
             fcall_ret = self.run_fcall(node_expression, scope_stack)        # returns an Expression object
-            # print("Eval EXPR: Function returned = ", fcall_ret)
             returned_expression = fcall_ret.expression
             program_state = fcall_ret.program_state
             actual_value = self.evaluate_expression(returned_expression, program_state)
-            # actual_value = self.run_fcall(node_expression, scope_stack)
         
         elif (node_type in self.OVERLOADED_OPERATIONS):
             actual_value =  self.overloaded_operator(node_expression, scope_stack)
@@ -342,57 +330,9 @@ class Interpreter(InterpreterBase):
         return actual_value
 
 
-
-    def evaluate_var2(self, node, scope_stack):      # returns primitive VALUE in variable + updates scope_stack w/ Val element
-
-        var_name = node.dict['name']
-
-        # print(f"\n--- in EVALUATE VAR\n\tNode { {var_name} }")
-        node_expression = self.get_variable_assignment(node, scope_stack)       # Always returns an expression class instance
-
-        node_type = node_expression.elem_type
-
-        # NEED from each call: return type, and return value
-        mapping_element = Element("=")
-        actual_value = NO_VALUE_DEFINED
-        value_type = NO_VALUE_DEFINED
-
-
-        # TODO: Pass into this function (evaluate_var) the scope stack relevant to when this variable was declared
-            # which should come from GET_VARIABLE_ASSIGNMENT
-            # and then pass it into evaluate_expression below 
-        actual_value = self.evaluate_expression(node_expression, scope_stack)
-        
-        # Get value type from returned value type
-            # to be used in Element(type)
-        if (actual_value is True or actual_value is False):
-            value_type = 'bool'
-        elif (type(actual_value) == int):
-            value_type = 'int'
-        elif (type(actual_value) == str):
-            value_type = 'string'
-
-        # print("+++ Current actual_value = ", actual_value)
-        # print("+++ Current value_type = ", value_type)
-        if (value_type is NO_VALUE_DEFINED or actual_value is NO_VALUE_DEFINED):
-            print("--- ERRR, either value_type or actual_value wasn't set")
-
-        value_element = Element(value_type)         # TODO: careful with obj refs here. this creates a new object but its possible actual_value points to something shared
-        value_element.dict['val'] = actual_value
-        mapping_element.dict = {'name': var_name, 'expression': value_element}
-
-        # Cache calcuated value in dictionary
-        self.run_assign(mapping_element, scope_stack)
-
-        # Actually return the value
-        return actual_value
-
-
     ''' ---- Running Statement Types ---- '''
     # VARDEF
     def run_vardef(self, node, scope_stack):
-        if (self.trace_output == True):
-            print("\tInside RUN_VARDEF")
         var_name = node.dict['name']
 
         # Retrieves top-most scope (within inner-most block)
@@ -412,14 +352,10 @@ class Interpreter(InterpreterBase):
 
         # Add new variable to func_vars           Initial value: None
         latest_scope[var_name] = expr_object
-        if (self.trace_output == True):
-            print("\t\tCurrent func_vars: ", latest_scope)
 
 
     ''' ---- Variable Assignment ---- '''
     def run_assign(self, node, scope_stack):
-        if (self.trace_output == True):
-            print("\tInside RUN_ASSIGN")
         node_dict = node.dict
         var_name = node_dict['name']
 
@@ -448,10 +384,6 @@ class Interpreter(InterpreterBase):
         expr_object = Expression(node_expression, copy.deepcopy(scope_stack))
 
         scope_to_update[var_name] = expr_object
-        # print("\n -- ASSIGNMENT of {" ,var_name, "} to ", expr_object)
-
-        # TODO: figure out how to store variable values w/o actually evaluating the expression
-            # but can't look up variable values until x is called (ie if undefined var, won't know until you try to use the variable that's assigned w/ it
 
 
     ''' ---- If Statement ---- '''
@@ -505,7 +437,6 @@ class Interpreter(InterpreterBase):
         elif (condition_type in self.BOOL_OPERATIONS):
             eval_statements = self.run_bool_operation(condition, func_vars)
         
-        # CHECK : IF none of these, is likely an integer expression
         else:
             super().error(
                     ErrorType.TYPE_ERROR,
@@ -520,8 +451,6 @@ class Interpreter(InterpreterBase):
         return eval_statements
 
     def evaluate_if(self, node, scope_stack):
-        if self.trace_output:
-            print("** Inside EVALUATE_IF\tNode: ", node)
 
         new_scope = {}
         scope_stack.append( new_scope )
@@ -547,8 +476,6 @@ class Interpreter(InterpreterBase):
         
     ''' --- For Loop ---- '''
     def run_for_loop(self, node, scope_stack):
-        if self.trace_output:
-            print("** Inside RUN FOR LOOP\tNode: ", node)
 
         initialize = node.dict['init']
         condition = node.dict['condition']
@@ -585,8 +512,6 @@ class Interpreter(InterpreterBase):
 
     ''' ---- Overloaded Operation ---- '''
     def overloaded_operator(self, node, func_vars):
-        if (self.trace_output):
-            print("IN OVERLOADED OPERATOR function")
 
         node_type = node.elem_type
         op1 = node.dict['op1']
@@ -596,7 +521,7 @@ class Interpreter(InterpreterBase):
         op1_value = self.eval_op(op1, func_vars)
         op2_value = self.eval_op(op2, func_vars)
 
-        operation_element = Element("+")
+        operation_element = Element("+")        # its + b/c that's the only overloaded operator, but would need to change for any other operator
 
         # TODO: I think? Add NONE check to make sure not using a void function in operation
 
@@ -723,12 +648,8 @@ class Interpreter(InterpreterBase):
 
 
     def run_string_operation(self, node, func_vars):
-        if (self.trace_output == True):
-            print("STRING OPERATION: ", node.elem_type)
 
         node_type = node.elem_type
-
-        # TODO: if add more string ops, need to check for NIL
 
         if node_type == 'bool' or node_type == 'int' or node_type == 'nil':
             super().error(
@@ -855,13 +776,9 @@ class Interpreter(InterpreterBase):
 
         # Boolean operation
         if node_type == '||':
-            # op1_value = self.run_bool_operation(op1, func_vars)
-            # op2_value = self.run_bool_operation(op2, func_vars)
             return self.run_bool_operation(op1, func_vars) or self.run_bool_operation(op2, func_vars)
         
         if node_type == '&&':
-            # op1_value = self.run_bool_operation(op1, func_vars)
-            # op2_value = self.run_bool_operation(op2, func_vars)
             return self.run_bool_operation(op1, func_vars) and self.run_bool_operation(op2, func_vars)
 
 
@@ -907,8 +824,6 @@ class Interpreter(InterpreterBase):
             
 
     def check_equality(self, node, func_vars):   
-        if (self.trace_output == True):
-            print("CHECKING EQUALITY: ", node.elem_type)
 
         node_type = node.elem_type
         op1 = node.dict['op1']
@@ -922,7 +837,7 @@ class Interpreter(InterpreterBase):
             print("** ERR: EVAL_OP did not return anything\n___________________________\n")
 
 
-        same = NO_VALUE_DEFINED     # TODO: could also change this to NVD
+        same = NO_VALUE_DEFINED
 
 
         # If both are bool
@@ -934,8 +849,6 @@ class Interpreter(InterpreterBase):
         
         # If different types
         elif ( type(op1_value) != type(op2_value) ):
-            if (self.trace_output == True):
-                print("\t False -- different types for ", op1_value, " and ", op2_value)
             same = False
         else:
             same = (op1_value == op2_value)
@@ -978,8 +891,6 @@ class Interpreter(InterpreterBase):
             )
 
     def integer_compare(self, node, func_vars):
-        if (self.trace_output == True):
-            print("CHECKING EQUALITY: ", node.elem_type)
 
         node_type = node.elem_type
         op1 = node.dict['op1']
@@ -1051,14 +962,10 @@ class Interpreter(InterpreterBase):
 
     ''' ---- PRINT function ---- '''
     def printout(self, func_vars, lst=[]):
-        if (self.trace_output):
-            print("\tINSIDE PRINTOUT")
 
         # lst = list of strings to concatenate
         string_to_output = ""       # TODO: check if 0 arguments should still print "" or just return
         for element in lst:
-            if (self.trace_output == True):
-                print("\t", element)
             node_type = element.elem_type
             if node_type == 'string':
                 string_to_output += element.dict['val']
