@@ -215,11 +215,14 @@ class Interpreter(InterpreterBase):
             case 'for':
                 self.run_for_loop(statement_node, func_vars)
             case 'try':
+                new_scope = {}
+                func_vars.append( new_scope )
                 for st in statement_node.dict['statements']:
                     try:
                         # print("\t Running 'try' statement: ", st)
                         self.run_statement(st, func_vars)
                     except BrewinException as excpt:
+                        func_vars.pop()
                         
                         exception_type = excpt.exception_type
                         
@@ -234,6 +237,8 @@ class Interpreter(InterpreterBase):
                                 return                                          # TODO: put a real return value or something I can check other times I'm calling run_statemnet
                             
                         raise BrewinException(exception_type)
+                    
+                func_vars.pop()
                 
             case 'raise':
                 
