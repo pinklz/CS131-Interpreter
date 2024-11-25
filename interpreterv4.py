@@ -75,7 +75,13 @@ class Interpreter(InterpreterBase):
             )
         
         # Run MAIN node
-        return self.run_func(main_node, [])
+        try:
+            return self.run_func(main_node, [])
+        except BrewinException as exception:
+            super().error(
+                ErrorType.FAULT_ERROR,
+                f"Error of type { {exception.exception_type} } was never caught in program"
+            )
 
     def check_builtin_funcs(self, func_node, scope_stack):
         node_dict = func_node.dict
@@ -214,7 +220,7 @@ class Interpreter(InterpreterBase):
                         # print("\t Running 'try' statement: ", st)
                         self.run_statement(st, func_vars)
                     except BrewinException as excpt:
-                        # print("Caught exception: ", excpt)
+                        
                         exception_type = excpt.exception_type
                         
                         for catcher in statement_node.dict['catchers']:
