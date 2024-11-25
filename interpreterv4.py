@@ -348,7 +348,7 @@ class Interpreter(InterpreterBase):
         default_element = Element('string')
         default_element.dict['val'] = "DIS IS THE INITIAL VARIABLE VALUE"
 
-        expr_object = Expression(default_element, copy.deepcopy(scope_stack))
+        expr_object = Expression(default_element, copy.copy(scope_stack))
 
         # Add new variable to func_vars           Initial value: None
         latest_scope[var_name] = expr_object
@@ -381,7 +381,7 @@ class Interpreter(InterpreterBase):
 
         # Calculate expression
         node_expression = node_dict['expression']
-        expr_object = Expression(node_expression, copy.deepcopy(scope_stack))
+        expr_object = Expression(node_expression, copy.copy(scope_stack))
 
         scope_to_update[var_name] = expr_object
 
