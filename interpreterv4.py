@@ -960,7 +960,13 @@ class Interpreter(InterpreterBase):
             super().output(arg)
             user_input = super().get_input()
 
-        return int(user_input)
+        result = int(user_input)
+        result_elem = Element('int')
+        result_elem.dict['val'] = result
+        expr_object = Expression(result_elem, scope_stack)
+
+        return expr_object
+
 
     ''' ---- INPUTIS function ---- '''
     def inputs(self, scope_stack, prompt=[]):
@@ -972,7 +978,12 @@ class Interpreter(InterpreterBase):
             super().output(arg)
             user_input = super().get_input()
 
-        return str(user_input)
+        result = str(user_input)
+        result_elem = Element('string')
+        result_elem.dict['val'] = result
+        expr_object = Expression(result_elem, scope_stack)
+
+        return expr_object
 
     ''' ---- PRINT function ---- '''
     def printout(self, func_vars, lst=[]):
