@@ -150,8 +150,16 @@ class Interpreter(InterpreterBase):
             )
 
         func_arg_objs = []
+
         for arg in func_args:
-            expr_object = Expression(arg, calling_func_vars)
+            new_scope_stack = []
+            for scope in calling_func_vars:
+                new_scope = {}
+                for var in scope:
+                    new_scope[var] = scope[var]     # Point this new variable value at the old one
+                new_scope_stack.append(new_scope)
+
+            expr_object = Expression(arg, new_scope_stack)
             func_arg_objs.append(expr_object)
 
 
@@ -951,7 +959,7 @@ class Interpreter(InterpreterBase):
         result = int(user_input)
         result_elem = Element('int')
         result_elem.dict['val'] = result
-        expr_object = Expression(result_elem, scope_stack)
+        expr_object = Expression(result_elem, scope_stack) # CHECK HERE - could need to make copy here
 
         return expr_object
 
@@ -969,7 +977,7 @@ class Interpreter(InterpreterBase):
         result = str(user_input)
         result_elem = Element('string')
         result_elem.dict['val'] = result
-        expr_object = Expression(result_elem, scope_stack)
+        expr_object = Expression(result_elem, scope_stack)  # CHECK HERE - could need to make copy here
 
         return expr_object
 
