@@ -332,11 +332,13 @@ class Interpreter(InterpreterBase):
         value_element = Element(value_type)         # TODO: careful with obj refs here. this creates a new object but its possible actual_value points to something shared
         value_element.dict['val'] = actual_value
 
-        # Assign this to the variable's dictionary
-        mapping_element = Element("=")
-        mapping_element.dict = {'name': var_name, 'expression': value_element}
+        expr_object.expression = value_element
 
-        self.run_assign(mapping_element, scope_stack)
+        # Assign this to the variable's dictionary
+        # mapping_element = Element("=")
+        # mapping_element.dict = {'name': var_name, 'expression': value_element}
+
+        # self.run_assign(mapping_element, scope_stack)
 
         return actual_value
 
