@@ -959,7 +959,15 @@ class Interpreter(InterpreterBase):
         result = int(user_input)
         result_elem = Element('int')
         result_elem.dict['val'] = result
-        expr_object = Expression(result_elem, scope_stack) # CHECK HERE - could need to make copy here
+        
+        new_scope_stack = []
+        for scope in scope_stack:
+            new_scope = {}
+            for var in scope:
+                new_scope[var] = scope[var]     # Point this new variable value at the old one
+            new_scope_stack.append(new_scope)
+        
+        expr_object = Expression(result_elem, new_scope_stack)
 
         return expr_object
 
@@ -977,7 +985,15 @@ class Interpreter(InterpreterBase):
         result = str(user_input)
         result_elem = Element('string')
         result_elem.dict['val'] = result
-        expr_object = Expression(result_elem, scope_stack)  # CHECK HERE - could need to make copy here
+
+        new_scope_stack = []
+        for scope in scope_stack:
+            new_scope = {}
+            for var in scope:
+                new_scope[var] = scope[var]     # Point this new variable value at the old one
+            new_scope_stack.append(new_scope)
+        
+        expr_object = Expression(result_elem, new_scope_stack)
 
         return expr_object
 
