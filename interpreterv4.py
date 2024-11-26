@@ -188,9 +188,6 @@ class Interpreter(InterpreterBase):
                 self.run_statement(statement_node, scope_stack)
             # If RETURN is found, should throw an exception
             except ReturnValue as rval:
-                # print("\nCaught return statement")
-                # print("\tValue: ", rval.return_value)
-                # print("\tPS: ", rval.return_value.program_state)
                 # Remove all added scopes from inside function
                 while (len(scope_stack) > 1):
                     scope_stack.pop()
@@ -222,7 +219,6 @@ class Interpreter(InterpreterBase):
                 func_vars.append( new_scope )
                 for st in statement_node.dict['statements']:
                     try:
-                        # print("\t Running 'try' statement: ", st)
                         self.run_statement(st, func_vars)
                     except BrewinException as excpt:
                         func_vars.pop()
@@ -259,7 +255,6 @@ class Interpreter(InterpreterBase):
                 for scope in func_vars:
                     new_scope = {}
                     for var in scope:
-                        # print("Var = ", var, "\t Scope [var] = ", scope[var])
                         new_scope[var] = scope[var]     # Point this new variable value at the old one
                     new_scope_stack.append(new_scope)
                 
@@ -284,7 +279,6 @@ class Interpreter(InterpreterBase):
         if (node_type in ['int', 'string', 'bool']):
             actual_value =  self.get_value(node_expression)
         
-        # TODO: will probably need to pass in a different version of scope_stack?
         elif (node_type == 'var'):
             actual_value = self.evaluate_var(node_expression, scope_stack)
 
@@ -292,9 +286,6 @@ class Interpreter(InterpreterBase):
             fcall_ret = self.run_fcall(node_expression, scope_stack)        # returns an Expression object
             returned_expression = fcall_ret.expression
             program_state = fcall_ret.program_state
-            # for scope in program_state:
-            #     for var in scope:
-            #         print("\t\t", var, "\t", scope[var])
             actual_value = self.evaluate_expression(returned_expression, program_state)
         
         elif (node_type in self.OVERLOADED_OPERATIONS):
@@ -318,12 +309,6 @@ class Interpreter(InterpreterBase):
         
         var_name = node.dict['name']
 
-        # print("\nEVAL VAR: here's what was passed in: ", node)
-        # print("\t Scope stack passed in = ")        # must be calling eval_var with the wrong scope_Stck somewhere
-        # for scope in scope_stack: 
-        #     for var in scope:
-        #         print("\t\t", var, "\t", scope[var])
-
         expr_object = self.get_variable_assignment(node, scope_stack)       # Always returns an expression class instance
         if type(expr_object) is not Expression:
             super().error(
@@ -333,11 +318,6 @@ class Interpreter(InterpreterBase):
 
         var_expression = expr_object.expression
         program_state = expr_object.program_state
-
-        # print("Evaluate Var, here's what was caught from GET_VAR_ASSIGNMENT:\n\t", var_expression)
-        # for scope in program_state: 
-        #     for var in scope:
-        #         print("\t\t", var, "\t", scope[var])
 
         actual_value = self.evaluate_expression(var_expression, program_state)
 
@@ -398,7 +378,6 @@ class Interpreter(InterpreterBase):
         # Traverse stack in reverse order
         for scope in scope_stack[::-1]:
             # If variable exists in this scope, this is the one you want to update
-            # ONLY EDIT TOPMOST SCOPE
             if var_name in scope:
                 scope_to_update = scope
                 break
