@@ -256,7 +256,7 @@ class Interpreter(InterpreterBase):
             
             case 'return':
                 return_expression = statement_node.dict['expression']
-                if (return_expression == None):
+                if (return_expression == None or return_expression == 'nil'):
                     return_expression = Element("nil")
 
                 new_scope_stack = []
@@ -286,6 +286,9 @@ class Interpreter(InterpreterBase):
 
         if (node_type in ['int', 'string', 'bool']):
             actual_value =  self.get_value(node_expression)
+
+        elif (node_type == 'nil'):
+            actual_value = Element("nil")
         
         elif (node_type == 'var'):
             actual_value = self.evaluate_var(node_expression, scope_stack)
@@ -821,6 +824,8 @@ class Interpreter(InterpreterBase):
             returned_expression = fcall_ret.expression
             program_state = fcall_ret.program_state
             actual_value = self.evaluate_expression(returned_expression, program_state)
+            if (type(actual_value) == Element and actual_value.elem_type == 'nil'):
+                actual_value = 'nil'
             return actual_value
         
         if op_type == 'nil':
@@ -1057,7 +1062,12 @@ class Interpreter(InterpreterBase):
                 returned_expression = fcall_ret.expression
                 program_state = fcall_ret.program_state
                 actual_value = self.evaluate_expression(returned_expression, program_state)
-                string_to_output += str(actual_value)
+                if actual_value is True:
+                    string_to_output += "true"
+                elif actual_value is False:
+                    string_to_output += "false"
+                else:
+                    string_to_output += str(actual_value)
 
         super().output(string_to_output)
         return Expression(Element("nil"), func_vars)
